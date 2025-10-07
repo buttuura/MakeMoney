@@ -102,9 +102,9 @@ class UserDatabase {
         try {
             const users = this.getUsers();
             
-            // Check if email already exists
-            if (this.findUserByEmail(userData.email)) {
-                return { success: false, message: 'Email already exists' };
+            // Check if phone number already exists
+            if (this.findUserByPhone(userData.phone)) {
+                return { success: false, message: 'Phone number already exists' };
             }
 
             // Generate unique user ID
@@ -163,9 +163,9 @@ class UserDatabase {
     /**
      * Authenticate user login
      */
-    loginUser(email, password) {
+    loginUser(phone, password) {
         try {
-            const user = this.findUserByEmail(email);
+            const user = this.findUserByPhone(phone);
             
             if (!user) {
                 return { success: false, message: 'User not found' };
@@ -189,6 +189,7 @@ class UserDatabase {
             // Create session
             const session = {
                 userId: user.id,
+                phone: user.phone,
                 email: user.email,
                 fullName: user.fullName,
                 role: user.role,
@@ -200,12 +201,13 @@ class UserDatabase {
             // Save session
             sessionStorage.setItem(this.sessionKey, JSON.stringify(session));
             sessionStorage.setItem('getcash_logged_in', 'true');
+            sessionStorage.setItem('getcash_user_phone', user.phone);
             sessionStorage.setItem('getcash_user_email', user.email);
             sessionStorage.setItem('getcash_user_id', user.id);
             sessionStorage.setItem('getcash_user_name', user.fullName);
             sessionStorage.setItem('getcash_user_level', user.level);
 
-            console.log('User logged in successfully:', user.email);
+            console.log('User logged in successfully:', user.phone);
             return { 
                 success: true, 
                 message: 'Login successful',
@@ -216,6 +218,14 @@ class UserDatabase {
             console.error('Login error:', error);
             return { success: false, message: 'Login failed due to system error' };
         }
+    }
+
+    /**
+     * Find user by phone number
+     */
+    findUserByPhone(phone) {
+        const users = this.getUsers();
+        return users.find(user => user.phone === phone.trim());
     }
 
     /**
@@ -294,6 +304,7 @@ class UserDatabase {
             // Clear session data
             sessionStorage.removeItem(this.sessionKey);
             sessionStorage.removeItem('getcash_logged_in');
+            sessionStorage.removeItem('getcash_user_phone');
             sessionStorage.removeItem('getcash_user_email');
             sessionStorage.removeItem('getcash_user_id');
             sessionStorage.removeItem('getcash_user_name');

@@ -82,7 +82,7 @@
 
         <div class="test-section">
             <h3>Quick Login Form</h3>
-            <input type="email" id="loginEmail" placeholder="Email" value="john.doe@example.com">
+            <input type="tel" id="loginPhone" placeholder="Phone Number" value="+256700000001">
             <input type="password" id="loginPassword" placeholder="Password" value="password123">
             <button onclick="loginTestUser()">Login Test User</button>
             <button onclick="logoutUser()">Logout</button>
@@ -117,7 +117,7 @@
         function testLogin() {
             log('=== Testing Login ===');
             
-            const result = window.UserDB.loginUser('test@getcash.com', 'test123');
+            const result = window.UserDB.loginUser('+256700000999', 'test123');
             log(`Login result: ${JSON.stringify(result, null, 2)}`);
         }
 
@@ -177,11 +177,11 @@
         }
 
         function loginTestUser() {
-            const email = document.getElementById('loginEmail').value;
+            const phone = document.getElementById('loginPhone').value;
             const password = document.getElementById('loginPassword').value;
 
             log('=== Logging in Custom User ===');
-            const result = window.UserDB.loginUser(email, password);
+            const result = window.UserDB.loginUser(phone, password);
             log(`Login result: ${JSON.stringify(result, null, 2)}`);
         }
 

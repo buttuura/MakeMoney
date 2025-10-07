@@ -33,7 +33,7 @@ class LoginController {
     setupElements() {
         // Get DOM elements
         this.form = document.querySelector('.login-form');
-        this.emailField = document.getElementById('email');
+        this.phoneField = document.getElementById('phone');
         this.passwordField = document.getElementById('password');
         this.rememberCheckbox = document.getElementById('remember');
         this.loginButton = document.querySelector('.login-btn');
@@ -42,7 +42,7 @@ class LoginController {
         // Setup event listeners
         this.setupEventListeners();
         
-        // Load saved email if exists
+        // Load saved phone if exists
         this.loadSavedCredentials();
     }
     
@@ -61,9 +61,9 @@ class LoginController {
         }
         
         // Real-time validation
-        if (this.emailField) {
-            this.emailField.addEventListener('blur', () => this.validateEmail());
-            this.emailField.addEventListener('input', () => this.clearFieldError(this.emailField));
+        if (this.phoneField) {
+            this.phoneField.addEventListener('blur', () => this.validatePhone());
+            this.phoneField.addEventListener('input', () => this.clearFieldError(this.phoneField));
         }
         
         if (this.passwordField) {
@@ -87,7 +87,7 @@ class LoginController {
         
         // Get form data
         const formData = {
-            email: this.emailField.value.trim(),
+            phone: this.phoneField.value.trim(),
             password: this.passwordField.value,
             remember: this.rememberCheckbox?.checked || false
         };
@@ -121,7 +121,7 @@ class LoginController {
             await new Promise(resolve => setTimeout(resolve, 1000));
             
             // Use UserDatabase to authenticate
-            const result = window.UserDB.loginUser(formData.email, formData.password);
+            const result = window.UserDB.loginUser(formData.phone, formData.password);
             
             if (result.success) {
                 // Store user data for session
@@ -142,9 +142,9 @@ class LoginController {
     handleLoginSuccess(formData, user) {
         // Save credentials if remember me is checked
         if (formData.remember) {
-            localStorage.setItem('getcash_remember_email', formData.email);
+            localStorage.setItem('getcash_remember_phone', formData.phone);
         } else {
-            localStorage.removeItem('getcash_remember_email');
+            localStorage.removeItem('getcash_remember_phone');
         }
         
         // Show personalized success message
@@ -182,12 +182,12 @@ class LoginController {
         // Clear previous errors
         this.clearAllErrors();
         
-        // Validate email
-        if (!this.emailField.value.trim()) {
-            this.showFieldError(this.emailField, 'Email is required');
+        // Validate phone number
+        if (!this.phoneField.value.trim()) {
+            this.showFieldError(this.phoneField, 'Phone number is required');
             isValid = false;
-        } else if (!this.isValidEmail(this.emailField.value.trim())) {
-            this.showFieldError(this.emailField, 'Please enter a valid email address');
+        } else if (!this.isValidPhone(this.phoneField.value.trim())) {
+            this.showFieldError(this.phoneField, 'Please enter a valid phone number');
             isValid = false;
         }
         
@@ -204,16 +204,16 @@ class LoginController {
     }
     
     /**
-     * Validate email field
+     * Validate phone field
      */
-    validateEmail() {
-        const email = this.emailField.value.trim();
+    validatePhone() {
+        const phone = this.phoneField.value.trim();
         
-        if (email && !this.isValidEmail(email)) {
-            this.showFieldError(this.emailField, 'Please enter a valid email address');
+        if (phone && !this.isValidPhone(phone)) {
+            this.showFieldError(this.phoneField, 'Please enter a valid phone number');
             return false;
-        } else if (email) {
-            this.showFieldSuccess(this.emailField);
+        } else if (phone) {
+            this.showFieldSuccess(this.phoneField);
             return true;
         }
         
@@ -221,11 +221,12 @@ class LoginController {
     }
     
     /**
-     * Check if email format is valid
+     * Check if phone format is valid
      */
-    isValidEmail(email) {
-        const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
-        return emailRegex.test(email);
+    isValidPhone(phone) {
+        // Allow various phone formats: +256700000000, 256700000000, 0700000000, 700000000
+        const phoneRegex = /^(\+?256|0)?[0-9]{9,10}$/;
+        return phoneRegex.test(phone.replace(/[\s\-\(\)]/g, ''));
     }
     
     /**
@@ -405,10 +406,10 @@ class LoginController {
      * Load saved credentials
      */
     loadSavedCredentials() {
-        const savedEmail = localStorage.getItem('getcash_remember_email');
+        const savedPhone = localStorage.getItem('getcash_remember_phone');
         
-        if (savedEmail && this.emailField) {
-            this.emailField.value = savedEmail;
+        if (savedPhone && this.phoneField) {
+            this.phoneField.value = savedPhone;
             
             if (this.rememberCheckbox) {
                 this.rememberCheckbox.checked = true;
