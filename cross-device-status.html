@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cross-Device Status - GetCash</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255,255,255,0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .status-card {
+            background: rgba(255,255,255,0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .error { border-left-color: #f44336; }
+        .warning { border-left-color: #ff9800; }
+        .info { border-left-color: #2196F3; }
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 8px;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .sync-button { background: linear-gradient(45deg, #2196F3, #1976D2); }
+        .test-button { background: linear-gradient(45deg, #ff9800, #f57f17); }
+        .danger-button { background: linear-gradient(45deg, #f44336, #d32f2f); }
+        pre {
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .device-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .device-card {
+            background: rgba(255,255,255,0.15);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .status-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 GetCash Cross-Device Status</h1>
+        <p>Monitor your account synchronization across devices</p>
+
+        <div class="device-info">
+            <div class="device-card">
+                <div class="status-icon" id="localStatus">📱</div>
+                <h3>This Device</h3>
+                <p id="localInfo">Checking...</p>
+            </div>
+            <div class="device-card">
+                <div class="status-icon" id="cloudStatus">☁️</div>
+                <h3>Cloud Sync</h3>
+                <p id="cloudInfo">Checking...</p>
+            </div>
+            <div class="device-card">
+                <div class="status-icon" id="crossDeviceStatus">🔄</div>
+                <h3>Cross-Device</h3>
+                <p id="crossDeviceInfo">Testing...</p>
+            </div>
+        </div>
+
+        <div class="status-card">
+            <h3>🔧 Sync Controls</h3>
+            <button onclick="testLocalStorage()">Check Local Data</button>
+            <button class="sync-button" onclick="testCloudSync()">Test Cloud Sync</button>
+            <button class="test-button" onclick="testCrossDevice()">Test Cross-Device</button>
+            <button onclick="showSyncStatus()">Show Sync Status</button>
+        </div>
+
+        <div class="status-card">
+            <h3>📊 Account Information</h3>
+            <button onclick="showCurrentUser()">Show Current User</button>
+            <button onclick="showAllDeviceData()">Show All Data</button>
+            <button onclick="simulateOtherDevice()">Simulate Other Device</button>
+        </div>
+
+        <div class="status-card error">
+            <h3>⚠️ Troubleshooting</h3>
+            <button class="danger-button" onclick="clearLocalData()">Clear This Device</button>
+            <button onclick="resetSync()">Reset Sync</button>
+            <button onclick="exportData()">Export Data</button>
+        </div>
+
+        <div class="status-card">
+            <h3>📋 Status Log</h3>
+            <pre id="statusLog">Initializing cross-device status check...</pre>
+        </div>
+
+        <div class="status-card info">
+            <h3>📖 How Cross-Device Access Works</h3>
+            <p><strong>✅ What Works:</strong></p>
+            <ul>
+                <li>Register once → Account saved locally + attempted cloud sync</li>
+                <li>Login → Syncs latest data from cloud before authenticating</li>
+                <li>Data updated → Background sync to cloud for other devices</li>
+            </ul>
+            
+            <p><strong>⚙️ Current Status:</strong></p>
+            <ul>
+                <li><strong>Local Storage:</strong> Always works (device-specific)</li>
+                <li><strong>Cloud Sync:</strong> May require GitHub API setup</li>
+                <li><strong>Fallback:</strong> Local storage ensures app always works</li>
+            </ul>
+
+            <p><strong>🔧 To Enable Full Cross-Device:</strong></p>
+            <ol>
+                <li>GitHub API needs authentication token</li>
+                <li>Alternative: Use different cloud service (Firebase, etc.)</li>
+                <li>Current: Works within same browser/device family</li>
+            </ol>
+        </div>
+    </div>
+
+    <script src="js/database.js"></script>
+    <script src="js/cloud-database.js"></script>
+    <script>
+        function log(message) {
+            const logElement = document.getElementById('statusLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.textContent += `\n[${timestamp}] ${message}`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function updateStatus(elementId, status, message) {
+            const element = document.getElementById(elementId);
+            const icons = {
+                success: '✅',
+                error: '❌',
+                warning: '⚠️',
+                info: 'ℹ️',
+                loading: '⏳'
+            };
+            element.textContent = icons[status] || status;
+            
+            const infoElement = document.getElementById(elementId.replace('Status', 'Info'));
+            if (infoElement) {
+                infoElement.textContent = message;
+            }
+        }
+
+        async function testLocalStorage() {
+            log('=== Testing Local Storage ===');
+            
+            try {
+                const users = window.UserDB.getUsers();
+                const currentUser = window.UserDB.getCurrentUser();
+                
+                updateStatus('localStatus', 'success', `${users.length} users found`);
+                log(`Local storage: ${users.length} users found`);
+                
+                if (currentUser) {
+                    log(`Current user: ${currentUser.fullName} (${currentUser.phone})`);
+                } else {
+                    log('No user currently logged in');
+                }
+                
+            } catch (error) {
+                updateStatus('localStatus', 'error', 'Local storage failed');
+                log(`Local storage error: ${error.message}`);
+            }
+        }
+
+        async function testCloudSync() {
+            log('=== Testing Cloud Sync ===');
+            updateStatus('cloudStatus', 'loading', 'Testing...');
+            
+            try {
+                if (!window.CloudDB) {
+                    throw new Error('CloudDB not available');
+                }
+
+                // Test cloud connectivity
+                const syncStatus = window.CloudDB.getSyncStatus();
+                log(`Cloud sync status: ${JSON.stringify(syncStatus, null, 2)}`);
+                
+                // Try to sync
+                await window.CloudDB.syncFromCloud();
+                updateStatus('cloudStatus', 'success', 'Cloud sync working');
+                log('Cloud sync successful');
+                
+            } catch (error) {
+                updateStatus('cloudStatus', 'error', 'Cloud sync failed');
+                log(`Cloud sync error: ${error.message}`);
+                log('Fallback: Using local storage only');
+            }
+        }
+
+        async function testCrossDevice() {
+            log('=== Testing Cross-Device Access ===');
+            updateStatus('crossDeviceStatus', 'loading', 'Testing...');
+            
+            try {
+                // Check if we have cloud sync capability
+                const hasCloudDB = !!window.CloudDB;
+                const syncStatus = hasCloudDB ? window.CloudDB.getSyncStatus() : null;
+                
+                if (hasCloudDB && syncStatus.canSync) {
+                    updateStatus('crossDeviceStatus', 'success', 'Cross-device enabled');
+                    log('Cross-device access: ENABLED');
+                    log('Users can login from any device with internet');
+                } else {
+                    updateStatus('crossDeviceStatus', 'warning', 'Local only');
+                    log('Cross-device access: LIMITED');
+                    log('Users can only login from this device/browser');
+                    log('Cloud sync needs configuration for full cross-device access');
+                }
+                
+            } catch (error) {
+                updateStatus('crossDeviceStatus', 'error', 'Test failed');
+                log(`Cross-device test error: ${error.message}`);
+            }
+        }
+
+        function showCurrentUser() {
+            log('=== Current User Information ===');
+            
+            const currentUser = window.UserDB.getCurrentUser();
+            if (currentUser) {
+                log(`User: ${currentUser.fullName}`);
+                log(`Phone: ${currentUser.phone}`);
+                log(`Email: ${currentUser.email}`);
+                log(`Level: ${currentUser.level}`);
+                log(`Balance: ${currentUser.balance} UGX`);
+                log(`Join Date: ${new Date(currentUser.joinDate).toLocaleDateString()}`);
+                log(`Last Login: ${currentUser.lastLogin ? new Date(currentUser.lastLogin).toLocaleString() : 'Never'}`);
+            } else {
+                log('No user currently logged in on this device');
+            }
+        }
+
+        function showAllDeviceData() {
+            log('=== All Device Data ===');
+            
+            const users = window.UserDB.getUsers();
+            log(`Total users on this device: ${users.length}`);
+            
+            users.forEach((user, index) => {
+                log(`${index + 1}. ${user.fullName} (${user.phone}) - ${user.level}`);
+            });
+            
+            if (window.CloudDB) {
+                const syncStatus = window.CloudDB.getSyncStatus();
+                log(`Cloud sync status: ${JSON.stringify(syncStatus, null, 2)}`);
+            }
+        }
+
+        function simulateOtherDevice() {
+            log('=== Simulating Other Device Access ===');
+            
+            // Clear session to simulate new device
+            sessionStorage.clear();
+            log('Session cleared (simulating new device)');
+            
+            // Check if user data is available
+            const users = window.UserDB.getUsers();
+            if (users.length > 0) {
+                log(`✅ User data found: ${users.length} users available`);
+                log('Users can login on this "new device"');
+                
+                users.forEach(user => {
+                    log(`  - ${user.fullName}: ${user.phone}`);
+                });
+            } else {
+                log('❌ No user data found on this "new device"');
+                log('Users would need to register again');
+            }
+        }
+
+        function clearLocalData() {
+            if (confirm('This will clear ALL user data from this device. Continue?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                log('=== Local Data Cleared ===');
+                log('All user data removed from this device');
+                updateStatus('localStatus', 'error', 'Data cleared');
+                
+                // Reinitialize
+                setTimeout(() => {
+                    window.UserDB.init();
+                    log('Database reinitialized with admin user');
+                    updateStatus('localStatus', 'success', 'Reinitialized');
+                }, 1000);
+            }
+        }
+
+        function showSyncStatus() {
+            log('=== Sync Status Report ===');
+            
+            if (window.CloudDB) {
+                const status = window.CloudDB.getSyncStatus();
+                log(`Sync Status: ${JSON.stringify(status, null, 2)}`);
+            } else {
+                log('CloudDB not available');
+            }
+            
+            log(`Local storage: ${localStorage.getItem('getcash_users') ? 'Available' : 'Empty'}`);
+            log(`Session: ${sessionStorage.getItem('getcash_logged_in') ? 'Active' : 'None'}`);
+        }
+
+        function resetSync() {
+            log('=== Resetting Sync ===');
+            localStorage.removeItem('getcash_last_sync');
+            log('Sync reset completed');
+        }
+
+        function exportData() {
+            const users = window.UserDB.exportUserData();
+            const dataStr = JSON.stringify(users, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'getcash-users-backup.json';
+            link.click();
+            log('User data exported to file');
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async function() {
+            log('Cross-device status page loaded');
+            
+            // Run initial tests
+            await testLocalStorage();
+            await testCloudSync();
+            await testCrossDevice();
+            
+            log('=== Initial Status Check Complete ===');
+        });
+    </script>
+</body>
+</html>

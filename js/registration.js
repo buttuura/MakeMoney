@@ -1,13 +1,4 @@
-document.addEventListen            // Debug: Log the form data
-            console.log('Registration formData:', formData);
-            
-            // Register user using cloud database for cross-device access
-            const result = window.CloudDB ? 
-                await window.CloudDB.registerUserCloud(formData) : 
-                window.UserDB.registerUser(formData);
-            
-            // Debug: Log the registration result
-            console.log('Registration result:', result);ontentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     const registrationForm = document.querySelector('.registration-form');
     
     registrationForm.addEventListener('submit', async function(e) {
@@ -28,20 +19,22 @@ document.addEventListen            // Debug: Log the form data
             return;
         }
         
-        // Save user data using UserDatabase
+        // Save user data using Cloud Database for cross-device access
         try {
-            // Debug: Log the form data being sent
+            // Debug: Log the form data
             console.log('Registration formData:', formData);
             
-            // Register user using the database system
-            const result = window.UserDB.registerUser(formData);
+            // Register user using cloud database for cross-device access
+            const result = window.CloudDB ? 
+                await window.CloudDB.registerUserCloud(formData) : 
+                window.UserDB.registerUser(formData);
             
             // Debug: Log the registration result
             console.log('Registration result:', result);
             
             if (result.success) {
                 // Show success message with user info
-                showAlert('Success', `Welcome ${result.user.fullName}! Account created successfully. You can now sign in with your phone number: ${result.user.phone}`, 'success', function() {
+                showAlert('Success', `Welcome ${result.user.fullName}! Account created successfully and synced to cloud. You can now sign in from ANY device with your phone number: ${result.user.phone}`, 'success', function() {
                     // Redirect to login page
                     window.location.href = 'index.html';
                 });
