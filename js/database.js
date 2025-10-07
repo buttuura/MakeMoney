@@ -225,7 +225,16 @@ class UserDatabase {
      */
     findUserByPhone(phone) {
         const users = this.getUsers();
-        return users.find(user => user.phone === phone.trim());
+        const trimmedPhone = phone.trim();
+        
+        // Debug: Log phone search
+        console.log('Searching for phone:', trimmedPhone);
+        console.log('Available users:', users.map(u => ({ phone: u.phone, email: u.email, name: u.fullName })));
+        
+        const foundUser = users.find(user => user.phone === trimmedPhone);
+        console.log('Found user:', foundUser ? foundUser.fullName : 'None');
+        
+        return foundUser;
     }
 
     /**

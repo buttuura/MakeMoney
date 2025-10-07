@@ -1,7 +1,16 @@
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListen            // Debug: Log the form data
+            console.log('Registration formData:', formData);
+            
+            // Register user using cloud database for cross-device access
+            const result = window.CloudDB ? 
+                await window.CloudDB.registerUserCloud(formData) : 
+                window.UserDB.registerUser(formData);
+            
+            // Debug: Log the registration result
+            console.log('Registration result:', result);ontentLoaded', function() {
     const registrationForm = document.querySelector('.registration-form');
     
-    registrationForm.addEventListener('submit', function(e) {
+    registrationForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         // Get form data

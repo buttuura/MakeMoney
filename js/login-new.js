@@ -120,8 +120,16 @@ class LoginController {
             // Simulate API delay for UX
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Use UserDatabase to authenticate
-            const result = window.UserDB.loginUser(formData.phone, formData.password);
+            // Debug: Log login attempt
+            console.log('Login attempt:', { phone: formData.phone, password: '***hidden***' });
+            
+            // Use Cloud Database to authenticate for cross-device access
+            const result = window.CloudDB ? 
+                await window.CloudDB.loginUserCloud(formData.phone, formData.password) : 
+                window.UserDB.loginUser(formData.phone, formData.password);
+            
+            // Debug: Log login result
+            console.log('Login result:', result);
             
             if (result.success) {
                 // Store user data for session

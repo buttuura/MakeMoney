@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Sync Status - GetCash</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        .status-card {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .status-card.warning { border-left-color: #ff9800; }
+        .status-card.error { border-left-color: #f44336; }
+        
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        button:disabled { 
+            background: #666; 
+            cursor: not-allowed; 
+            transform: none; 
+        }
+        
+        .sync-info {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .success { color: #4CAF50; }
+        .warning { color: #ff9800; }
+        .error { color: #f44336; }
+        
+        .back-link {
+            display: inline-block;
+            color: white;
+            text-decoration: none;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            transition: background 0.3s;
+        }
+        .back-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-link">← Back to Login</a>
+        
+        <h1>🌐 Cross-Device Access Status</h1>
+        <p>Check if your GetCash account can be accessed from any device</p>
+        
+        <div class="status-card" id="statusCard">
+            <h3>📱 Device Access Status</h3>
+            <div id="statusInfo">Loading...</div>
+        </div>
+        
+        <div class="status-card">
+            <h3>🔄 Sync Controls</h3>
+            <button onclick="manualSync()" id="syncButton">Sync Now</button>
+            <button onclick="checkCurrentUser()">Check Current User</button>
+            <button onclick="showAllUsers()">Show All Users</button>
+            <button onclick="testCrossDevice()">Test Cross-Device</button>
+        </div>
+        
+        <div class="status-card">
+            <h3>📊 Sync Information</h3>
+            <div id="syncInfo" class="sync-info">Click "Sync Now" to see sync information</div>
+        </div>
+        
+        <div class="status-card">
+            <h3>❓ How Cross-Device Access Works</h3>
+            <p><strong>✅ With Cloud Sync (Recommended):</strong></p>
+            <ul>
+                <li>Your account data is stored in GitHub cloud storage</li>
+                <li>Login from any device with your phone number and password</li>
+                <li>Data syncs automatically across all devices</li>
+                <li>Balance, tasks, and progress are available everywhere</li>
+            </ul>
+            
+            <p><strong>⚠️ Local Storage Only:</strong></p>
+            <ul>
+                <li>Account data stays on the device where you registered</li>
+                <li>Need to register separately on each device</li>
+                <li>No sync between devices</li>
+            </ul>
+        </div>
+        
+        <div class="status-card">
+            <h3>🛠️ Troubleshooting</h3>
+            <p><strong>Can't login on new device?</strong></p>
+            <ul>
+                <li>Make sure cloud sync is working (click "Sync Now")</li>
+                <li>Check your phone number format (+256...)</li>
+                <li>Verify your password is correct</li>
+                <li>Try manual sync on both devices</li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="js/database.js"></script>
+    <script src="js/cloud-database.js"></script>
+    <script>
+        function updateStatus() {
+            const statusCard = document.getElementById('statusCard');
+            const statusInfo = document.getElementById('statusInfo');
+            
+            if (window.CloudDB) {
+                const status = window.CloudDB.getSyncStatus();
+                const currentUser = window.UserDB.getCurrentUser();
+                
+                let html = '';
+                if (currentUser) {
+                    html += `<div class="success">✅ Logged in as: ${currentUser.fullName} (${currentUser.phone})</div>`;
+                    statusCard.className = 'status-card';
+                } else {
+                    html += `<div class="warning">⚠️ No user currently logged in</div>`;
+                    statusCard.className = 'status-card warning';
+                }
+                
+                html += `<div>📊 Local users: ${status.userCount}</div>`;
+                html += `<div>💾 Has local data: ${status.hasLocalData ? 'Yes' : 'No'}</div>`;
+                html += `<div>🕒 Last sync: ${status.lastSync || 'Never'}</div>`;
+                html += `<div class="success">🌐 Cloud sync: Available</div>`;
+                
+                statusInfo.innerHTML = html;
+            } else {
+                statusInfo.innerHTML = `
+                    <div class="error">❌ Cloud sync not available</div>
+                    <div class="warning">⚠️ Using local storage only - device-specific accounts</div>
+                `;
+                statusCard.className = 'status-card error';
+            }
+        }
+        
+        async function manualSync() {
+            const button = document.getElementById('syncButton');
+            const syncInfo = document.getElementById('syncInfo');
+            
+            if (!window.CloudDB) {
+                syncInfo.innerHTML = '<div class="error">❌ Cloud sync not available</div>';
+                return;
+            }
+            
+            button.disabled = true;
+            button.textContent = 'Syncing...';
+            syncInfo.innerHTML = 'Starting sync...';
+            
+            try {
+                const result = await window.CloudDB.manualSync();
+                
+                if (result.success) {
+                    syncInfo.innerHTML = `<div class="success">✅ ${result.message}</div>`;
+                } else {
+                    syncInfo.innerHTML = `<div class="error">❌ ${result.message}</div>`;
+                }
+                
+                updateStatus();
+            } catch (error) {
+                syncInfo.innerHTML = `<div class="error">❌ Sync failed: ${error.message}</div>`;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'Sync Now';
+            }
+        }
+        
+        function checkCurrentUser() {
+            const syncInfo = document.getElementById('syncInfo');
+            const currentUser = window.UserDB.getCurrentUser();
+            
+            if (currentUser) {
+                syncInfo.innerHTML = `
+                    <div class="success">✅ Current User:</div>
+                    <div>Name: ${currentUser.fullName}</div>
+                    <div>Phone: ${currentUser.phone}</div>
+                    <div>Email: ${currentUser.email}</div>
+                    <div>Level: ${currentUser.level}</div>
+                    <div>Balance: ${currentUser.balance} UGX</div>
+                    <div>Joined: ${new Date(currentUser.joinDate).toLocaleDateString()}</div>
+                `;
+            } else {
+                syncInfo.innerHTML = '<div class="warning">⚠️ No user currently logged in</div>';
+            }
+        }
+        
+        function showAllUsers() {
+            const syncInfo = document.getElementById('syncInfo');
+            const users = window.UserDB.getUsers();
+            
+            let html = `<div class="success">📊 All Users (${users.length}):</div>`;
+            users.forEach((user, index) => {
+                html += `<div>${index + 1}. ${user.fullName} (${user.phone}) - ${user.level}</div>`;
+            });
+            
+            syncInfo.innerHTML = html;
+        }
+        
+        async function testCrossDevice() {
+            const syncInfo = document.getElementById('syncInfo');
+            
+            if (!window.CloudDB) {
+                syncInfo.innerHTML = '<div class="error">❌ Cloud sync required for cross-device access</div>';
+                return;
+            }
+            
+            syncInfo.innerHTML = 'Testing cross-device access...';
+            
+            try {
+                // Test if we can find a user across devices
+                const testPhone = '+256700000000'; // Admin user
+                const user = await window.CloudDB.findUserAcrossDevices(testPhone);
+                
+                if (user) {
+                    syncInfo.innerHTML = `
+                        <div class="success">✅ Cross-device test successful!</div>
+                        <div>Found user: ${user.fullName} (${user.phone})</div>
+                        <div>This account can be accessed from any device</div>
+                    `;
+                } else {
+                    syncInfo.innerHTML = `
+                        <div class="warning">⚠️ Test user not found</div>
+                        <div>Create an account first, then test cross-device access</div>
+                    `;
+                }
+            } catch (error) {
+                syncInfo.innerHTML = `<div class="error">❌ Cross-device test failed: ${error.message}</div>`;
+            }
+        }
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(updateStatus, 1000); // Wait for cloud DB to initialize
+            
+            // Auto-refresh status every 30 seconds
+            setInterval(updateStatus, 30000);
+        });
+    </script>
+</body>
+</html>
