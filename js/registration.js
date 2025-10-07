@@ -36,26 +36,21 @@ document.addEventListener('DOMContentLoaded', function() {
             isActive: true
         };
         
-        // Save user data
+        // Save user data using UserDatabase
         try {
-            // Get existing users or create empty array
-            const existingUsers = JSON.parse(localStorage.getItem('users') || '[]');
+            // Register user using the database system
+            const result = window.UserDB.registerUser(formData);
             
-            // Check if email already exists
-            if (existingUsers.find(user => user.email === userData.email)) {
-                showAlert('Error', 'An account with this email already exists!', 'error');
-                return;
+            if (result.success) {
+                // Show success message with user info
+                showAlert('Success', `Welcome ${result.user.fullName}! Account created successfully. You can now sign in with your email: ${result.user.email}`, 'success', function() {
+                    // Redirect to login page
+                    window.location.href = 'index.html';
+                });
+            } else {
+                // Show error message
+                showAlert('Registration Failed', result.message, 'error');
             }
-            
-            // Add new user
-            existingUsers.push(userData);
-            localStorage.setItem('users', JSON.stringify(existingUsers));
-            
-            // Show success message
-            showAlert('Success', 'Account created successfully! You can now sign in.', 'success', function() {
-                // Redirect to login page
-                window.location.href = 'index.html';
-            });
             
         } catch (error) {
             console.error('Registration error:', error);

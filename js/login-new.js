@@ -96,15 +96,16 @@ class LoginController {
         this.setLoadingState(true);
         
         try {
-            // Simulate login process (replace with actual API call)
-            const success = await this.performLogin(formData);
+            // Perform login using database system
+            const result = await this.performLogin(formData);
             
-            if (success) {
-                this.handleLoginSuccess(formData);
+            if (result.success) {
+                this.handleLoginSuccess(formData, result.user);
             } else {
-                this.handleLoginError('Invalid email or password. Please try again.');
+                this.handleLoginError(result.message || 'Invalid email or password. Please try again.');
             }
         } catch (error) {
+            console.error('Login process error:', error);
             this.handleLoginError('Network error. Please check your connection and try again.');
         } finally {
             this.setLoadingState(false);
@@ -112,21 +113,33 @@ class LoginController {
     }
     
     /**
-     * Perform login (replace with actual API call)
+     * Perform login using UserDatabase
      */
     async performLogin(formData) {
-        // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // Simulate login validation (replace with actual logic)
-        // For demo purposes, accept any valid email format with password length > 6
-        return this.isValidEmail(formData.email) && formData.password.length >= 6;
+        try {
+            // Simulate API delay for UX
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            // Use UserDatabase to authenticate
+            const result = window.UserDB.loginUser(formData.email, formData.password);
+            
+            if (result.success) {
+                // Store user data for session
+                this.currentUser = result.user;
+                return { success: true, user: result.user, message: result.message };
+            } else {
+                return { success: false, message: result.message };
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, message: 'Login failed due to system error' };
+        }
     }
     
     /**
      * Handle successful login
      */
-    handleLoginSuccess(formData) {
+    handleLoginSuccess(formData, user) {
         // Save credentials if remember me is checked
         if (formData.remember) {
             localStorage.setItem('getcash_remember_email', formData.email);
@@ -134,16 +147,14 @@ class LoginController {
             localStorage.removeItem('getcash_remember_email');
         }
         
-        // Show success message
-        this.showMessage('Login successful! Redirecting...', 'success');
+        // Show personalized success message
+        const welcomeMessage = user ? `Welcome back, ${user.firstName}! Redirecting to your dashboard...` : 'Login successful! Redirecting...';
+        this.showMessage(welcomeMessage, 'success');
         
-        // Store login state
-        sessionStorage.setItem('getcash_logged_in', 'true');
-        sessionStorage.setItem('getcash_user_email', formData.email);
-        
-        // Redirect after short delay
+        // Session is already created by UserDatabase.loginUser()
+        // Just redirect after short delay
         setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'Welcomepage.html';
         }, 1500);
     }
     
