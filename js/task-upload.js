@@ -88,9 +88,9 @@ class TaskUploadController {
     getLevelPrice(level) {
         const prices = {
             'intern': 500,
-            'worker': 500,
-            'senior': 1600,
-            'expert': 4200
+            'level1': 500,
+            'level2': 1600,
+            'level3': 4200
         };
         return prices[level] || 500;
     }
@@ -356,9 +356,9 @@ class TaskUploadController {
         
         const taskPages = {
             'intern': 'tasks-intern.html',
-            'worker': 'tasks-level1.html',
-            'senior': 'tasks-level2.html',
-            'expert': 'tasks-level3.html'
+            'level1': 'tasks-level1.html',
+            'level2': 'tasks-level2.html',
+            'level3': 'tasks-level3.html'
         };
         
         const page = taskPages[this.selectedLevel.level];

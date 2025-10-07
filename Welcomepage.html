@@ -46,10 +46,6 @@
                 <span class="quick-icon">📤</span>
                 <span class="quick-text">Upload Tasks</span>
             </a>
-            <button class="quick-link logout-link" onclick="handleLogout()">
-                <span class="quick-icon">🚪</span>
-                <span class="quick-text">Logout</span>
-            </button>
         </div>
     </div>
 
@@ -74,14 +70,5 @@
         </div>
     </footer>
     <script src="js/main.js"></script>
-    <script>
-        // Check if user is logged in, redirect to login if not
-        document.addEventListener('DOMContentLoaded', function() {
-            const isLoggedIn = sessionStorage.getItem('getcash_logged_in') === 'true';
-            if (!isLoggedIn) {
-                window.location.href = 'index.html';
-            }
-        });
-    </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GetCash - Level 3 Tasks</title>
+    <title>GetCash - Intern Tasks</title>
     <link rel="stylesheet" href="css/tasks.css">
 </head>
 <body>
@@ -11,12 +11,12 @@
         <!-- Header -->
         <div class="tasks-header">
             <div class="header-top">
-                <button class="back-btn" onclick="history.back()">←</button>
-                <h1>🚀 Level 3 Tasks</h1>
-                <div class="level-badge level3">Level 3</div>
+                <button class="back-btn" onclick="window.location.href='index.html'">← Back</button>
+                <h1>🎓 Intern Tasks</h1>
+                <div class="level-badge intern">Level 1</div>
             </div>
             <div class="header-info">
-                <div class="earning-rate">UGX 1,200 per task</div>
+                <div class="earning-rate">UGX 500 per task</div>
                 <div class="available-tasks">Loading tasks...</div>
             </div>
         </div>
@@ -34,14 +34,14 @@
         <div class="no-tasks" id="noTasks" style="display: none;">
             <div class="no-tasks-icon">📝</div>
             <h3>No Tasks Available</h3>
-            <p>Check back later for new Level 3 tasks!</p>
+            <p>Check back later for new intern-level tasks!</p>
             <button class="refresh-btn" onclick="location.reload()">Refresh</button>
         </div>
 
         <!-- Bottom Navigation -->
         <nav class="bottom-nav">
-            <a href="Welcomepage.html" class="nav-item">
-                <span class="nav-icon">�7�00</span>
+            <a href="index.html" class="nav-item">
+                <span class="nav-icon">🏠</span>
                 <span class="nav-label">Home</span>
             </a>
             <a href="jobs.html" class="nav-item">
@@ -61,8 +61,8 @@
 
     <script src="js/tasks.js"></script>
     <script>
-        // Initialize level3 tasks page
-        window.tasksController = new TasksController('level3');
+        // Initialize intern tasks page
+        window.tasksController = new TasksController('intern');
     </script>
 </body>
 </html>

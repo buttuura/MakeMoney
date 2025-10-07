@@ -293,9 +293,9 @@ class StatusCheckController {
     getTaskPageUrl(level) {
         const taskPages = {
             'intern': 'tasks-intern.html',
-            'worker': 'tasks-level1.html',
-            'senior': 'tasks-level2.html',
-            'expert': 'tasks-level3.html'
+            'level1': 'tasks-level1.html',
+            'level2': 'tasks-level2.html',
+            'level3': 'tasks-level3.html'
         };
         return taskPages[level] || 'tasks-intern.html';
     }

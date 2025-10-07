@@ -80,9 +80,9 @@ class AdminApprovalController {
     generateSampleData() {
         const levels = [
             { name: 'intern', price: 10000, displayName: 'Intern Level' },
-            { name: 'worker', price: 75000, displayName: 'Level 1 Worker' },
-            { name: 'senior', price: 250000, displayName: 'Senior Worker' },
-            { name: 'expert', price: 500000, displayName: 'Expert Worker' }
+            { name: 'level1', price: 15000, displayName: 'Level 1' },
+            { name: 'level2', price: 25000, displayName: 'Level 2' },
+            { name: 'level3', price: 40000, displayName: 'Level 3' }
         ];
         
         const statuses = ['pending', 'approved', 'rejected'];
