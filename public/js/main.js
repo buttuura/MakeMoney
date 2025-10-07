@@ -225,5 +225,34 @@ style.textContent =
     '}' +
     '.main-btn {' +
         'transition: transform 0.15s ease-out;' +
+    '}' +
+    '.logout-link {' +
+        'background: #dc3545 !important;' +
+        'color: white !important;' +
+        'border: none;' +
+        'cursor: pointer;' +
+    '}' +
+    '.logout-link:hover {' +
+        'background: #c82333 !important;' +
     '}';
 document.head.appendChild(style);
+
+/**
+ * Handle user logout
+ */
+function handleLogout() {
+    if (confirm('Are you sure you want to logout?')) {
+        // Clear session storage
+        sessionStorage.removeItem('getcash_logged_in');
+        sessionStorage.removeItem('getcash_user_email');
+        sessionStorage.removeItem('getcash_selected_job_level');
+        
+        // Show logout message
+        showNotification('Logged out successfully', 'success');
+        
+        // Redirect to login page after short delay
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 1000);
+    }
+}

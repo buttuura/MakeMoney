@@ -143,7 +143,7 @@ class LoginController {
         
         // Redirect after short delay
         setTimeout(() => {
-            window.location.href = 'index.html';
+            window.location.href = 'Welcomepage.html';
         }, 1500);
     }
     
