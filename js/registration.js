@@ -19,31 +19,20 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Create user account
-        const userData = {
-            id: Date.now().toString(),
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            fullName: `${formData.firstName} ${formData.lastName}`,
-            email: formData.email,
-            phone: formData.phone,
-            password: formData.password,
-            level: 'Intern',
-            balance: 0,
-            totalEarned: 0,
-            tasksCompleted: 0,
-            joinDate: new Date().toISOString(),
-            isActive: true
-        };
-        
         // Save user data using UserDatabase
         try {
+            // Debug: Log the form data being sent
+            console.log('Registration formData:', formData);
+            
             // Register user using the database system
             const result = window.UserDB.registerUser(formData);
             
+            // Debug: Log the registration result
+            console.log('Registration result:', result);
+            
             if (result.success) {
                 // Show success message with user info
-                showAlert('Success', `Welcome ${result.user.fullName}! Account created successfully. You can now sign in with your email: ${result.user.email}`, 'success', function() {
+                showAlert('Success', `Welcome ${result.user.fullName}! Account created successfully. You can now sign in with your phone number: ${result.user.phone}`, 'success', function() {
                     // Redirect to login page
                     window.location.href = 'index.html';
                 });
@@ -142,7 +131,7 @@ function showAlert(title, message, type = 'info', callback = null) {
         </div>
         <h3 style="margin: 0 0 10px 0; color: #333;">${title}</h3>
         <p style="margin: 0 0 20px 0; color: #666;">${message}</p>
-        <button onclick="this.closest('.alert-overlay').remove(); ${callback ? callback.toString() + '()' : ''}" 
+        <button id="alertOkButton" 
                 style="background: ${colors[type]}; color: white; border: none; padding: 10px 20px; 
                        border-radius: 5px; cursor: pointer; font-size: 16px;">
             OK
@@ -151,6 +140,17 @@ function showAlert(title, message, type = 'info', callback = null) {
     
     overlay.appendChild(alertBox);
     document.body.appendChild(overlay);
+    
+    // Add event listener for OK button
+    const okButton = document.getElementById('alertOkButton');
+    if (okButton) {
+        okButton.addEventListener('click', function() {
+            overlay.remove();
+            if (callback && typeof callback === 'function') {
+                callback();
+            }
+        });
+    }
     
     // Add CSS animation
     if (!document.getElementById('alertStyles')) {
