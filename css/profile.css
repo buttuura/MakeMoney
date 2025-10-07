@@ -32,8 +32,16 @@ body {
 .header-top {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 15px;
     margin-bottom: 8px;
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex: 1;
 }
 
 .back-btn {
@@ -50,6 +58,29 @@ body {
 
 .back-btn:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+.logout-btn {
+    background: rgba(255, 107, 107, 0.9);
+    border: none;
+    color: white;
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.logout-btn:hover {
+    background: rgba(255, 107, 107, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(255, 107, 107, 0.3);
+}
+
+.logout-btn:active {
+    transform: translateY(0);
 }
 
 .profile-header h1 {

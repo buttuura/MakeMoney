@@ -384,6 +384,34 @@ function initiateWithdrawal() {
     }
 }
 
+// Logout function
+function logout() {
+    const confirmLogout = confirm('🚪 Are you sure you want to logout?');
+    
+    if (confirmLogout) {
+        try {
+            // Clear all user data from localStorage
+            localStorage.removeItem('userData');
+            localStorage.removeItem('userLevel');
+            localStorage.removeItem('financialData');
+            localStorage.removeItem('userTasks');
+            localStorage.removeItem('getcash_api_token');
+            localStorage.removeItem('isLoggedIn');
+            localStorage.removeItem('userPhone');
+            
+            // Show logout message
+            alert('✅ Successfully logged out!\n\nRedirecting to login page...');
+            
+            // Redirect to login page
+            window.location.href = 'index.html';
+            
+        } catch (error) {
+            console.error('Logout error:', error);
+            alert('❌ Error during logout. Please try again.');
+        }
+    }
+}
+
 // Initialize profile controller when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
     window.profileController = new ProfileController();

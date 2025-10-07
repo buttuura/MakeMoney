@@ -3,18 +3,15 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const helmet = require('helmet');
-const { RateLimiterMemory } = require('rate-limiter-flexible');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 const JWT_SECRET = process.env.JWT_SECRET || 'getcash-secret-key-2025';
 
-// Rate limiter
-const rateLimiter = new RateLimiterMemory({
-    keyPrefix: 'middleware',
-    points: 10, // Number of requests
-    duration: 60, // Per 60 seconds
-});
+// Simple rate limiting without external dependency
+const requestCounts = new Map();
+const RATE_LIMIT = 100; // requests per minute
+const RATE_WINDOW = 60 * 1000; // 1 minute
 
 // Middleware
 app.use(helmet());
@@ -22,24 +19,40 @@ app.use(cors({
     origin: [
         'https://buttuura.github.io',
         'http://localhost:3000',
+        'http://localhost:8080',
         'http://127.0.0.1:5500',
-        'http://localhost:5500'
+        'http://localhost:5500',
+        'http://127.0.0.1:8080'
     ],
     credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
 
-// Rate limiting middleware
-app.use(async (req, res, next) => {
-    try {
-        await rateLimiter.consume(req.ip);
-        next();
-    } catch (rejRes) {
-        res.status(429).json({ 
+// Simple rate limiting middleware
+app.use((req, res, next) => {
+    const now = Date.now();
+    const ip = req.ip || req.connection.remoteAddress;
+    
+    if (!requestCounts.has(ip)) {
+        requestCounts.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
+        return next();
+    }
+    
+    const requestData = requestCounts.get(ip);
+    if (now > requestData.resetTime) {
+        requestCounts.set(ip, { count: 1, resetTime: now + RATE_WINDOW });
+        return next();
+    }
+    
+    if (requestData.count >= RATE_LIMIT) {
+        return res.status(429).json({ 
             success: false, 
             message: 'Too many requests. Please try again later.' 
         });
     }
+    
+    requestData.count++;
+    next();
 });
 
 // In-memory database (for simplicity - in production, use PostgreSQL/MongoDB)
