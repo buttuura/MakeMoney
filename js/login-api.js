@@ -221,6 +221,55 @@ class LoginControllerAPI {
             localStorage.removeItem('getcash_remember_phone');
         }
         
+        // Save user profile data for profile page
+        if (user) {
+            const profileData = {
+                name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                firstName: user.firstName || '',
+                lastName: user.lastName || '',
+                phone: user.phone || formData.phone,
+                email: user.email || '',
+                level: user.level || 'intern',
+                memberSince: user.joinDate ? new Date(user.joinDate).toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                }) : new Date().toLocaleDateString('en-US', { 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                }),
+                status: user.isActive ? 'active' : 'inactive',
+                joinDate: user.joinDate || new Date().toISOString()
+            };
+            
+            // Save to localStorage for profile page
+            localStorage.setItem('userData', JSON.stringify(profileData));
+            localStorage.setItem('userLevel', profileData.level);
+            localStorage.setItem('userPhone', profileData.phone);
+            localStorage.setItem('isLoggedIn', 'true');
+            
+            // Save or load financial data
+            if (!localStorage.getItem('financialData')) {
+                const financialData = {
+                    accountBalance: user.balance || 0,
+                    totalEarned: user.totalEarned || 0,
+                    todayEarnings: 0,
+                    taskEarnings: 0,
+                    totalDeposited: 0,
+                    availableWithdrawal: 0,
+                    pendingWithdrawal: 0,
+                    lastDepositAmount: 0,
+                    levelBonus: 0,
+                    referralBonus: 0
+                };
+                
+                localStorage.setItem('financialData', JSON.stringify(financialData));
+            }
+            
+            console.log('Profile data loaded for user:', profileData.name);
+        }
+        
         // Show personalized success message with cross-device info
         const deviceInfo = window.APIService && window.APIService.isAuthenticated() ? 
             'Your account is synced across all devices!' : 

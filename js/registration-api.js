@@ -52,6 +52,46 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Your account is now available on ALL devices! Login from anywhere with your phone number.' :
                     'Account created locally. For cross-device access, ensure API backend is available.';
                 
+                // Save user profile data for profile page
+                const profileData = {
+                    name: result.user.fullName || `${formData.firstName} ${formData.lastName}`,
+                    firstName: formData.firstName,
+                    lastName: formData.lastName,
+                    phone: result.user.phone || formData.phone,
+                    email: result.user.email || formData.email,
+                    level: result.user.level || 'intern',
+                    memberSince: new Date().toLocaleDateString('en-US', { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    }),
+                    status: 'active',
+                    joinDate: result.user.joinDate || new Date().toISOString()
+                };
+                
+                // Save to localStorage for profile page
+                localStorage.setItem('userData', JSON.stringify(profileData));
+                localStorage.setItem('userLevel', profileData.level);
+                localStorage.setItem('userPhone', profileData.phone);
+                
+                // Initialize default financial data
+                const financialData = {
+                    accountBalance: 0,
+                    totalEarned: 0,
+                    todayEarnings: 0,
+                    taskEarnings: 0,
+                    totalDeposited: 0,
+                    availableWithdrawal: 0,
+                    pendingWithdrawal: 0,
+                    lastDepositAmount: 0,
+                    levelBonus: 0,
+                    referralBonus: 0
+                };
+                
+                localStorage.setItem('financialData', JSON.stringify(financialData));
+                
+                console.log('Profile data saved for user:', profileData.name);
+                
                 // Show success message
                 showAlert('Success', 
                     `Welcome ${result.user.fullName}! Account created successfully.\n\n${deviceMessage}\n\nPhone: ${result.user.phone}`, 
