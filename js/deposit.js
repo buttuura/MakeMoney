@@ -82,7 +82,7 @@ class RechargeController {
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="confirmTerms" required>
                                     <span class="checkmark"></span>
-                                    I confirm the details above are correct and agree to proceed
+                                    I confirm that I have deposited the payment using the account name and phone number provided above
                                 </label>
                             </div>
                         </form>
@@ -316,6 +316,9 @@ class RechargeController {
             return;
         }
         
+        // Show processing overlay
+        this.showProcessingOverlay();
+        
         try {
             // Create deposit request
             const depositRequest = {
@@ -337,17 +340,19 @@ class RechargeController {
                 screenshot: null
             };
             
-            // Show processing message
-            this.showNotification('Submitting deposit request for admin approval...', 'info');
-            
             // Save deposit request (simulated - in real app would use GitHub or API)
             await this.submitDepositRequest(depositRequest);
+            
+            // Hide processing overlay
+            this.hideProcessingOverlay();
             
             // Show success message
             this.showDepositSubmissionSuccess(depositRequest);
             
         } catch (error) {
             console.error('Error submitting deposit request:', error);
+            // Hide processing overlay
+            this.hideProcessingOverlay();
             this.showNotification('Failed to submit deposit request. Please try again.', 'error');
         }
     }
@@ -663,6 +668,190 @@ class RechargeController {
                 }
             }, 300);
         }, 5000);
+    }
+    
+    showProcessingOverlay() {
+        // Remove any existing processing overlay
+        const existingOverlay = document.getElementById('processingOverlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+        
+        // Create processing overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'processingOverlay';
+        overlay.innerHTML = `
+            <div class="processing-content">
+                <div class="processing-spinner">
+                    <div class="spinner-ring"></div>
+                    <div class="processing-icon">💳</div>
+                </div>
+                <h3 class="processing-title">Processing Payment</h3>
+                <p class="processing-message">Please wait while we submit your deposit request...</p>
+                <div class="processing-steps">
+                    <div class="step active">📝 Validating details</div>
+                    <div class="step">🔄 Submitting request</div>
+                    <div class="step">✅ Awaiting approval</div>
+                </div>
+            </div>
+        `;
+        
+        // Add styles for the overlay
+        Object.assign(overlay.style, {
+            position: 'fixed',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: '99999',
+            animation: 'fadeIn 0.3s ease'
+        });
+        
+        // Add styles for processing content
+        const contentStyles = `
+            <style id="processingStyles">
+                .processing-content {
+                    background: white;
+                    padding: 40px;
+                    border-radius: 20px;
+                    text-align: center;
+                    max-width: 400px;
+                    width: 90%;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+                    animation: slideInUp 0.3s ease;
+                }
+                
+                .processing-spinner {
+                    position: relative;
+                    margin: 0 auto 30px;
+                    width: 80px;
+                    height: 80px;
+                }
+                
+                .spinner-ring {
+                    width: 80px;
+                    height: 80px;
+                    border: 4px solid #f3f3f3;
+                    border-top: 4px solid #6c5ce7;
+                    border-radius: 50%;
+                    animation: spin 1s linear infinite;
+                }
+                
+                .processing-icon {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    font-size: 24px;
+                }
+                
+                .processing-title {
+                    margin: 0 0 10px;
+                    color: #333;
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                }
+                
+                .processing-message {
+                    margin: 0 0 30px;
+                    color: #666;
+                    font-size: 0.95rem;
+                }
+                
+                .processing-steps {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                    align-items: flex-start;
+                }
+                
+                .step {
+                    padding: 8px 16px;
+                    background: #f8f9fa;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    color: #666;
+                    width: 100%;
+                    text-align: left;
+                    transition: all 0.3s ease;
+                }
+                
+                .step.active {
+                    background: #6c5ce7;
+                    color: white;
+                    animation: pulse 1.5s infinite;
+                }
+                
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                
+                @keyframes slideInUp {
+                    from { 
+                        opacity: 0;
+                        transform: translateY(30px);
+                    }
+                    to { 
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+                
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.02); }
+                }
+                
+                @keyframes fadeOut {
+                    from { opacity: 1; }
+                    to { opacity: 0; }
+                }
+            </style>
+        `;
+        
+        // Add styles to head
+        document.head.insertAdjacentHTML('beforeend', contentStyles);
+        
+        // Add overlay to body
+        document.body.appendChild(overlay);
+        
+        // Simulate progress through steps
+        setTimeout(() => {
+            const steps = overlay.querySelectorAll('.step');
+            steps[0].classList.remove('active');
+            steps[1].classList.add('active');
+        }, 1500);
+        
+        setTimeout(() => {
+            const steps = overlay.querySelectorAll('.step');
+            steps[1].classList.remove('active');
+            steps[2].classList.add('active');
+        }, 3000);
+    }
+    
+    hideProcessingOverlay() {
+        const overlay = document.getElementById('processingOverlay');
+        if (overlay) {
+            overlay.style.animation = 'fadeOut 0.3s ease';
+            setTimeout(() => {
+                overlay.remove();
+                // Remove processing styles
+                const processingStyles = document.getElementById('processingStyles');
+                if (processingStyles) {
+                    processingStyles.remove();
+                }
+            }, 300);
+        }
     }
 }
 
