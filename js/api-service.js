@@ -356,6 +356,140 @@ class APIService {
             this.syncInterval = null;
         }
     }
+
+    // ===== DEPOSIT APPROVAL METHODS =====
+
+    /**
+     * Submit deposit request
+     */
+    async submitDepositRequest(depositData) {
+        try {
+            const response = await this.makeRequest('/api/deposits/submit', {
+                method: 'POST',
+                data: depositData
+            });
+
+            console.log('Deposit request submitted successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Failed to submit deposit request:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get all deposit requests (admin)
+     */
+    async getDepositRequests(status = null) {
+        try {
+            let url = '/api/deposits/requests';
+            if (status) {
+                url += `?status=${status}`;
+            }
+
+            const response = await this.makeRequest(url, {
+                method: 'GET'
+            });
+
+            console.log('Deposit requests loaded:', response);
+            return response;
+        } catch (error) {
+            console.error('Failed to load deposit requests:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Approve deposit request (admin)
+     */
+    async approveDepositRequest(depositId, adminNotes = '') {
+        try {
+            const response = await this.makeRequest(`/api/deposits/approve/${depositId}`, {
+                method: 'PUT',
+                data: { adminNotes }
+            });
+
+            console.log('Deposit approved successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Failed to approve deposit:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Reject deposit request (admin)
+     */
+    async rejectDepositRequest(depositId, reason = '') {
+        try {
+            const response = await this.makeRequest(`/api/deposits/reject/${depositId}`, {
+                method: 'PUT',
+                data: { reason }
+            });
+
+            console.log('Deposit rejected successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Failed to reject deposit:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get user notifications
+     */
+    async getUserNotifications(userId) {
+        try {
+            const response = await this.makeRequest(`/api/notifications/user/${userId}`, {
+                method: 'GET'
+            });
+
+            console.log('User notifications loaded:', response);
+            return response;
+        } catch (error) {
+            console.error('Failed to load user notifications:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Mark notification as read
+     */
+    async markNotificationRead(notificationId) {
+        try {
+            const response = await this.makeRequest(`/api/notifications/read/${notificationId}`, {
+                method: 'PUT'
+            });
+
+            console.log('Notification marked as read:', response);
+            return response;
+        } catch (error) {
+            console.error('Failed to mark notification as read:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Update user level and access (after approval)
+     */
+    async updateUserLevel(userId, level, depositAmount) {
+        try {
+            const response = await this.makeRequest(`/api/users/update-level/${userId}`, {
+                method: 'PUT',
+                data: { 
+                    level, 
+                    depositAmount,
+                    taskAccess: true 
+                }
+            });
+
+            console.log('User level updated successfully:', response);
+            return response;
+        } catch (error) {
+            console.error('Failed to update user level:', error);
+            throw error;
+        }
+    }
 }
 
 // Create global instance

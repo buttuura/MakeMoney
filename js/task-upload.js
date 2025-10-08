@@ -7,9 +7,9 @@ class TaskUploadController {
         
         // GitHub configuration
         this.github = {
-            owner: 'your-username', // Replace with your GitHub username
-            repo: 'getcash-tasks',   // Replace with your repository name
-            token: 'ghp_your_token_here', // Replace with your GitHub token
+            owner: 'buttuura',       // Your GitHub username
+            repo: 'MakeMoney',       // Your repository name
+            token: 'ghp_16VDaaXXAdh7F5jZneZqbTqKd4CUpx1fXojH', // Your GitHub token
             branch: 'main'
         };
         

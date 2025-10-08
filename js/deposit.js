@@ -7,13 +7,8 @@ class RechargeController {
         this.rechargeAmount = 0;
         this.userDetails = null;
         
-        // GitHub configuration (same as admin panel)
-        this.github = {
-            owner: 'yourusername',          // Replace with your GitHub username
-            repo: 'getcash-tasks',          // Replace with your repository name
-            token: 'your_github_token',     // Replace with your GitHub personal access token
-            branch: 'main'                  // Replace with your branch name
-        };
+        // Use Render.com backend instead of GitHub
+        this.apiService = new APIService();
         
         this.init();
     }
@@ -340,14 +335,14 @@ class RechargeController {
                 screenshot: null
             };
             
-            // Save deposit request (simulated - in real app would use GitHub or API)
+            // Save deposit request for admin approval
             await this.submitDepositRequest(depositRequest);
             
             // Hide processing overlay
             this.hideProcessingOverlay();
             
-            // Show success message
-            this.showDepositSubmissionSuccess(depositRequest);
+            // Show pending approval message instead of immediate success
+            this.showPendingApprovalMessage(depositRequest);
             
         } catch (error) {
             console.error('Error submitting deposit request:', error);
@@ -365,34 +360,30 @@ class RechargeController {
     
     async submitDepositRequest(depositRequest) {
         try {
-            // Try to save to GitHub first
+            // Submit to Render backend first
             try {
-                // Get existing requests from GitHub
-                const existingRequests = await this.loadFromGitHub('deposit_requests.json');
-                
-                // Add new request
-                existingRequests.push(depositRequest);
-                
-                // Save to GitHub
-                await this.saveToGitHub('deposit_requests.json', existingRequests);
+                const response = await this.apiService.submitDepositRequest(depositRequest);
                 
                 this.showNotification('Request submitted to admin panel successfully!', 'success');
                 
-            } catch (githubError) {
-                console.warn('GitHub save failed, using local storage:', githubError);
+                // Save locally as backup
+                localStorage.setItem('lastDepositRequest', JSON.stringify(depositRequest));
                 
-                // Fallback to localStorage if GitHub fails
+                return response;
+                
+            } catch (apiError) {
+                console.warn('API submission failed, using local storage:', apiError);
+                
+                // Fallback to localStorage if API fails
                 const localRequests = JSON.parse(localStorage.getItem('depositRequests') || '[]');
                 localRequests.push(depositRequest);
                 localStorage.setItem('depositRequests', JSON.stringify(localRequests));
+                localStorage.setItem('lastDepositRequest', JSON.stringify(depositRequest));
                 
-                this.showNotification('Request saved locally. GitHub sync will retry later.', 'warning');
+                this.showNotification('Request saved locally. Will sync when connection is restored.', 'warning');
+                
+                return depositRequest;
             }
-            
-            // Always save locally as backup
-            localStorage.setItem('lastDepositRequest', JSON.stringify(depositRequest));
-            
-            return depositRequest;
             
         } catch (error) {
             console.error('Error saving deposit request:', error);
@@ -471,7 +462,7 @@ class RechargeController {
         }
     }
     
-    showDepositSubmissionSuccess(depositRequest) {
+    showPendingApprovalMessage(depositRequest) {
         // Clear form selections
         this.selectedLevel = null;
         this.selectedPayment = null;
@@ -484,16 +475,56 @@ class RechargeController {
         this.hidePaymentSection();
         this.updateDisplay();
         
-        // Show simple success notification instead of popup
+        // Show pending message
         this.showNotification(
-            `✅ Payment processed successfully! Your ${depositRequest.levelDisplayName} level has been activated.`,
+            `📤 Deposit request submitted! Request ID: ${depositRequest.id}. Awaiting admin review...`,
+            'info'
+        );
+        
+        // Redirect to welcome page after showing message
+        setTimeout(() => {
+            window.location.href = 'Welcomepage.html';
+        }, 4000);
+    }
+    
+    showDepositSubmissionSuccess(depositRequest) {
+        // This function is now called only after admin approval
+        // Show success notification
+        this.showNotification(
+            `✅ Payment approved! Your ${depositRequest.levelDisplayName} level has been activated.`,
             'success'
         );
+        
+        // Update user level and financial data
+        this.updateUserDataAfterApproval(depositRequest);
         
         // Redirect to welcome page after short delay
         setTimeout(() => {
             window.location.href = 'Welcomepage.html';
         }, 3000);
+    }
+    
+    updateUserDataAfterApproval(depositRequest) {
+        // Update user level
+        localStorage.setItem('userLevel', depositRequest.level);
+        
+        // Update financial data
+        const currentFinancialData = JSON.parse(localStorage.getItem('financialData') || '{}');
+        const updatedFinancialData = {
+            ...currentFinancialData,
+            accountBalance: (currentFinancialData.accountBalance || 0) + depositRequest.amount,
+            totalDeposited: (currentFinancialData.totalDeposited || 0) + depositRequest.amount,
+            lastDepositAmount: depositRequest.amount
+        };
+        
+        localStorage.setItem('financialData', JSON.stringify(updatedFinancialData));
+        
+        // Update user data with new level
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData) {
+            userData.level = depositRequest.level;
+            localStorage.setItem('userData', JSON.stringify(userData));
+        }
     }
     
 

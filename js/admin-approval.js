@@ -6,14 +6,10 @@ class AdminApprovalController {
         this.allApprovals = [];
         this.selectedApprovals = new Set();
         this.currentModal = null;
+        this.githubAvailable = true; // Track GitHub connectivity
         
-        // GitHub configuration (same as task upload)
-        this.github = {
-            owner: 'yourusername',          // Replace with your GitHub username
-            repo: 'getcash-tasks',          // Replace with your repository name
-            token: 'your_github_token',     // Replace with your GitHub personal access token
-            branch: 'main'                  // Replace with your branch name
-        };
+        // Use Render.com backend instead of GitHub
+        this.apiService = new APIService();
         
         this.init();
     }
@@ -28,8 +24,39 @@ class AdminApprovalController {
     
     async setupPage() {
         this.setupEventListeners();
+        await this.testGitHubConnectivity();
         await this.loadApprovals();
         this.updateStats();
+    }
+
+    async testGitHubConnectivity() {
+        try {
+            // Test GitHub API connection
+            const response = await fetch(`https://api.github.com/repos/${this.github.owner}/${this.github.repo}`, {
+                headers: {
+                    'Authorization': `token ${this.github.token}`
+                }
+            });
+
+            if (response.status === 401) {
+                console.warn('GitHub authentication failed. Please check your token.');
+                this.showNotification('GitHub authentication failed. Using local storage fallback.', 'warning');
+                this.githubAvailable = false;
+            } else if (response.status === 404) {
+                console.warn('GitHub repository not found. Please check repository settings.');
+                this.showNotification('GitHub repository not found. Using local storage fallback.', 'warning');
+                this.githubAvailable = false;
+            } else if (response.ok) {
+                console.log('GitHub connectivity verified.');
+                this.githubAvailable = true;
+            } else {
+                console.warn('GitHub API error:', response.statusText);
+                this.githubAvailable = false;
+            }
+        } catch (error) {
+            console.warn('GitHub connectivity test failed:', error);
+            this.githubAvailable = false;
+        }
     }
     
     setupEventListeners() {
@@ -52,13 +79,19 @@ class AdminApprovalController {
         try {
             this.showLoading(true);
             
-            // Load deposit requests from GitHub
-            const deposits = await this.loadFromGitHub('deposit_requests.json');
+            // Load deposit requests from Render backend
+            const deposits = await this.apiService.getDepositRequests();
             
-            // If no data in GitHub, create sample data for testing
+            // If no data from API, try localStorage fallback
             if (deposits.length === 0) {
-                this.allApprovals = this.generateSampleData();
-                this.showNotification('No deposit requests found. Showing sample data.', 'info');
+                const fallbackData = localStorage.getItem('github_fallback_deposit_requests.json');
+                if (fallbackData) {
+                    this.allApprovals = JSON.parse(fallbackData);
+                    this.showNotification('Loaded from local storage (API returned no data).', 'warning');
+                } else {
+                    this.allApprovals = this.generateSampleData();
+                    this.showNotification('No deposit requests found. Showing sample data.', 'info');
+                }
             } else {
                 this.allApprovals = deposits;
             }
@@ -68,10 +101,28 @@ class AdminApprovalController {
             
         } catch (error) {
             console.error('Error loading approvals:', error);
-            this.showNotification('Failed to load approvals. Using sample data.', 'error');
-            this.allApprovals = this.generateSampleData();
-            this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
-            this.displayApprovals();
+            
+            // Fallback to localStorage if API fails
+            const fallbackData = localStorage.getItem('github_fallback_deposit_requests.json');
+            if (fallbackData) {
+                try {
+                    this.allApprovals = JSON.parse(fallbackData);
+                    this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
+                    this.displayApprovals();
+                    this.showNotification('API unavailable. Loaded from local storage.', 'warning');
+                } catch (parseError) {
+                    console.error('Error parsing localStorage data:', parseError);
+                    this.allApprovals = this.generateSampleData();
+                    this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
+                    this.displayApprovals();
+                    this.showNotification('Failed to load approvals. Using sample data.', 'error');
+                }
+            } else {
+                this.allApprovals = this.generateSampleData();
+                this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
+                this.displayApprovals();
+                this.showNotification('API unavailable and no local data. Using sample data.', 'error');
+            }
         } finally {
             this.showLoading(false);
         }
@@ -369,11 +420,11 @@ class AdminApprovalController {
             approval.approvedAt = new Date().toISOString();
             approval.adminNotes = 'Approved by admin';
             
-            // Update user level and activate task access
-            await this.updateUserLevel(approval);
+            // Approve via API service
+            await this.apiService.approveDepositRequest(approval.id || approval.timestamp, 'Approved by admin');
             
-            // Save to GitHub
-            await this.saveToGitHub('deposit_requests.json', this.allApprovals);
+            // Update user level via API
+            await this.apiService.updateUserLevel(approval.userId, approval.level, approval.amount);
             
             this.showNotification(`Deposit approved for ${approval.userName}. Task access activated.`, 'success');
             this.closeModal();
@@ -382,7 +433,27 @@ class AdminApprovalController {
             
         } catch (error) {
             console.error('Error approving deposit:', error);
-            this.showNotification('Failed to approve deposit. Please try again.', 'error');
+            
+            // Try to handle GitHub authentication errors gracefully
+            if (error.message.includes('GitHub API error: 401')) {
+                this.showNotification('GitHub authentication failed. Using local storage fallback.', 'warning');
+                
+                // Save locally as fallback
+                try {
+                    localStorage.setItem('approved_deposits', JSON.stringify(this.allApprovals));
+                    localStorage.setItem('user_level_' + approval.userId, approval.level);
+                    localStorage.setItem('task_access_' + approval.userId, 'true');
+                    
+                    this.showNotification(`Deposit approved for ${approval.userName} (local storage). Task access activated.`, 'success');
+                    this.closeModal();
+                    this.displayApprovals();
+                    this.updateStats();
+                } catch (localError) {
+                    this.showNotification('Failed to approve deposit. Please check GitHub token configuration.', 'error');
+                }
+            } else {
+                this.showNotification('Failed to approve deposit. Please try again.', 'error');
+            }
         }
     }
     
@@ -444,6 +515,34 @@ class AdminApprovalController {
             
         } catch (error) {
             console.error('Error updating user level:', error);
+            throw error;
+        }
+    }
+
+    async createUserNotification(approval) {
+        try {
+            // Load existing notifications
+            const notifications = await this.loadFromGitHub('user_notifications.json') || [];
+            
+            // Create notification for the approved user
+            const notification = {
+                userId: approval.userId,
+                type: 'deposit_approved',
+                message: `✅ Payment approved! Your ${approval.levelDisplayName} level has been activated.`,
+                depositRequest: approval,
+                createdAt: new Date().toISOString(),
+                read: false
+            };
+            
+            notifications.push(notification);
+            
+            // Save notifications
+            await this.saveToGitHub('user_notifications.json', notifications);
+            
+            console.log(`Notification created for user ${approval.userId}`);
+            
+        } catch (error) {
+            console.error('Error creating user notification:', error);
             throw error;
         }
     }
@@ -515,6 +614,21 @@ class AdminApprovalController {
     
     // GitHub helper methods
     async loadFromGitHub(fileName) {
+        // If GitHub is not available, try localStorage fallback
+        if (!this.githubAvailable) {
+            console.warn('GitHub not available, trying localStorage fallback for:', fileName);
+            const fallbackData = localStorage.getItem(`github_fallback_${fileName}`);
+            if (fallbackData) {
+                try {
+                    return JSON.parse(fallbackData);
+                } catch (e) {
+                    console.error('Error parsing localStorage fallback:', e);
+                    return [];
+                }
+            }
+            return [];
+        }
+
         try {
             const file = await this.getGitHubFile(fileName);
             if (file && file.content) {
@@ -524,11 +638,28 @@ class AdminApprovalController {
             return [];
         } catch (error) {
             console.error('Error loading from GitHub:', error);
+            // Try localStorage fallback on error
+            const fallbackData = localStorage.getItem(`github_fallback_${fileName}`);
+            if (fallbackData) {
+                console.warn('Using localStorage fallback for:', fileName);
+                try {
+                    return JSON.parse(fallbackData);
+                } catch (e) {
+                    console.error('Error parsing localStorage fallback:', e);
+                }
+            }
             return [];
         }
     }
     
     async saveToGitHub(fileName, data) {
+        // If GitHub is not available, use localStorage fallback
+        if (!this.githubAvailable) {
+            console.warn('GitHub not available, using localStorage fallback for:', fileName);
+            localStorage.setItem(`github_fallback_${fileName}`, JSON.stringify(data));
+            return { message: 'Saved to local storage' };
+        }
+
         const content = JSON.stringify(data, null, 2);
         
         try {
@@ -556,6 +687,10 @@ class AdminApprovalController {
             return await response.json();
         } catch (error) {
             console.error('Error saving to GitHub:', error);
+            // Fallback to localStorage on error
+            console.warn('Falling back to localStorage for:', fileName);
+            localStorage.setItem(`github_fallback_${fileName}`, JSON.stringify(data));
+            this.githubAvailable = false;
             throw error;
         }
     }
