@@ -28,17 +28,22 @@ document.addEventListener('DOMContentLoaded', function() {
         // Register user using API service for true cross-device access
         try {
             console.log('Registering with API Service for cross-device access...');
+            console.log('APIService available:', !!window.APIService);
+            console.log('Backend URL:', window.APIService ? window.APIService.baseURL : 'N/A');
             
             // First try API service (Render.com backend)
             let result;
             if (window.APIService) {
+                console.log('Attempting API registration...');
                 result = await window.APIService.registerUser(formData);
                 console.log('API Registration result:', result);
                 
-                if (!result.success) {
+                if (!result || !result.success) {
                     // If API fails, fall back to local storage
-                    console.log('API registration failed, falling back to local storage...');
+                    console.log('API registration failed, error:', result ? result.message : 'Unknown error');
+                    console.log('Falling back to local storage...');
                     result = window.UserDB.registerUser(formData);
+                    console.log('Local storage registration result:', result);
                 }
             } else {
                 // No API service available, use local storage

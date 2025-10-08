@@ -6,7 +6,7 @@
 class APIService {
     constructor() {
         // This will be your Render.com backend URL
-        this.baseURL = 'https://getcash-backend.onrender.com'; // Update after deployment
+        this.baseURL = 'https://getcash-backend-1.onrender.com'; // Updated to new backend URL
         this.token = null;
         this.init();
     }
@@ -82,21 +82,32 @@ class APIService {
      */
     async registerUser(userData) {
         try {
+            console.log('API Service: Starting registration request...');
+            console.log('API Service: Data to send:', userData);
+            
             const response = await this.makeRequest('/api/auth/register', {
                 method: 'POST',
                 body: JSON.stringify(userData)
             });
+            
+            console.log('API Service: Registration response received:', response);
 
             if (response.success && response.token) {
+                console.log('API Service: Registration successful, saving token...');
                 this.setToken(response.token);
             }
 
             return response;
         } catch (error) {
-            console.error('Registration failed:', error);
+            console.error('API Service: Registration failed with error:', error);
+            console.error('API Service: Error details:', {
+                message: error.message,
+                stack: error.stack,
+                name: error.name
+            });
             return {
                 success: false,
-                message: error.message || 'Registration failed'
+                message: error.message || 'Registration failed - network or server error'
             };
         }
     }
