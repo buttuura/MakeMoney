@@ -484,68 +484,19 @@ class RechargeController {
         this.hidePaymentSection();
         this.updateDisplay();
         
-        // Show success popup
-        const successPopup = `
-            <div class="popup-overlay" id="successPopup">
-                <div class="popup-content success-popup">
-                    <div class="popup-header success-header">
-                        <div class="success-icon">✅</div>
-                        <h3>Deposit Request Submitted!</h3>
-                    </div>
-                    <div class="popup-body">
-                        <div class="request-summary">
-                            <h4>Request Details:</h4>
-                            <p><strong>Request ID:</strong> ${depositRequest.id}</p>
-                            <p><strong>Name:</strong> ${depositRequest.userName}</p>
-                            <p><strong>Level:</strong> ${depositRequest.levelDisplayName}</p>
-                            <p><strong>Amount:</strong> UGX ${depositRequest.amount.toLocaleString()}</p>
-                            <p><strong>Payment Method:</strong> ${depositRequest.paymentMethod}</p>
-                            <p><strong>Transaction ID:</strong> ${depositRequest.transactionId}</p>
-                        </div>
-                        
-                        <div class="approval-info">
-                            <h4>⏳ Awaiting Admin Approval</h4>
-                            <p>Your deposit request has been submitted successfully and is now pending admin approval.</p>
-                            <p><strong>What happens next:</strong></p>
-                            <ul>
-                                <li>Admin will review your payment details</li>
-                                <li>You'll receive approval notification within 24 hours</li>
-                                <li>Once approved, your task access will be activated</li>
-                                <li>You can then start earning from tasks</li>
-                            </ul>
-                        </div>
-                        
-                        <div class="contact-info">
-                            <p><strong>Need help?</strong> Contact admin for faster processing.</p>
-                        </div>
-                    </div>
-                    <div class="popup-footer">
-                        <button class="btn-primary" onclick="this.closeSuccessPopup()">Continue</button>
-                        <button class="btn-secondary" onclick="this.checkStatus()">Check Status</button>
-                    </div>
-                </div>
-            </div>
-        `;
+        // Show simple success notification instead of popup
+        this.showNotification(
+            `✅ Payment processed successfully! Your ${depositRequest.levelDisplayName} level has been activated.`,
+            'success'
+        );
         
-        document.body.insertAdjacentHTML('beforeend', successPopup);
-        
-        // Auto-close after 10 seconds
+        // Redirect to welcome page after short delay
         setTimeout(() => {
-            this.closeSuccessPopup();
-        }, 10000);
+            window.location.href = 'Welcomepage.html';
+        }, 3000);
     }
     
-    checkStatus() {
-        this.closeSuccessPopup();
-        this.showNotification('Status check feature coming soon! Check with admin for updates.', 'info');
-    }
-    
-    closeSuccessPopup() {
-        const popup = document.getElementById('successPopup');
-        if (popup) {
-            popup.remove();
-        }
-    }
+
     
     hidePaymentSection() {
         const paymentSection = document.querySelector('.payment-section');
