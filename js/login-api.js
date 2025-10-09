@@ -182,13 +182,11 @@ class LoginControllerAPI {
      */
     async checkExistingAuth() {
         try {
-            // Check API token first
+            // Only redirect if authenticated, do not auto-login after sign out
             if (window.APIService && window.APIService.isAuthenticated()) {
                 console.log('Found API authentication, syncing user data...');
                 const syncResult = await window.APIService.syncUserData();
-                
                 if (syncResult.success) {
-                    // User is already logged in via API
                     this.showMessage('You are already logged in. Redirecting...', 'info');
                     setTimeout(() => {
                         window.location.href = 'Welcomepage.html';
@@ -196,7 +194,6 @@ class LoginControllerAPI {
                     return;
                 }
             }
-            
             // Check local session
             if (window.UserDB && window.UserDB.isLoggedIn()) {
                 console.log('Found local session');
@@ -205,6 +202,7 @@ class LoginControllerAPI {
                     window.location.href = 'Welcomepage.html';
                 }, 1500);
             }
+            // If not authenticated, stay on login page and do not auto-login
         } catch (error) {
             console.error('Auth check error:', error);
         }
