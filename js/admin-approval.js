@@ -25,6 +25,11 @@ class AdminApprovalController {
         this.setupEventListeners();
         await this.loadApprovals();
         this.updateStats();
+        // Auto-refresh every 10 seconds
+        setInterval(async () => {
+            await this.loadApprovals();
+            this.updateStats();
+        }, 10000);
     }
 
 
@@ -50,14 +55,15 @@ class AdminApprovalController {
             this.showLoading(true);
             
             // Load deposit requests from Render backend
-            const deposits = await this.apiService.getDepositRequests();
+            const response = await this.apiService.getDepositRequests();
+            const deposits = response.data || [];
             
             if (deposits && deposits.length > 0) {
                 this.allApprovals = deposits;
                 this.showNotification('✅ Deposit requests loaded successfully!', 'success');
             } else {
-                this.allApprovals = this.generateSampleData();
-                this.showNotification('No deposit requests found. Showing sample data for testing.', 'info');
+                this.allApprovals = [];
+                this.showNotification('📋 No deposit requests found. Waiting for users to submit deposits.', 'info');
             }
             
             this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
@@ -66,59 +72,17 @@ class AdminApprovalController {
         } catch (error) {
             console.error('Error loading approvals:', error);
             
-            // If API fails, use sample data for testing
-            this.allApprovals = this.generateSampleData();
-            this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
+            // If API fails, show empty state
+            this.allApprovals = [];
+            this.pendingApprovals = [];
             this.displayApprovals();
-            this.showNotification('⚠️ API connection failed. Using sample data for testing. Check if backend server is running.', 'warning');
+            this.showNotification('❌ API connection failed. Check if backend server is running.', 'error');
         } finally {
             this.showLoading(false);
         }
     }
     
-    generateSampleData() {
-        const levels = [
-            { name: 'intern', price: 10000, displayName: 'Intern Level' },
-            { name: 'level1', price: 15000, displayName: 'Level 1' },
-            { name: 'level2', price: 25000, displayName: 'Level 2' },
-            { name: 'level3', price: 40000, displayName: 'Level 3' }
-        ];
-        
-        const statuses = ['pending', 'approved', 'rejected'];
-        const paymentMethods = ['Mobile Money', 'Bank Transfer', 'Cash'];
-        
-        const sampleData = [];
-        
-        for (let i = 1; i <= 15; i++) {
-            const level = levels[Math.floor(Math.random() * levels.length)];
-            const status = statuses[Math.floor(Math.random() * statuses.length)];
-            const paymentMethod = paymentMethods[Math.floor(Math.random() * paymentMethods.length)];
-            
-            // Make more pending requests for better demo
-            const finalStatus = i <= 8 ? 'pending' : status;
-            
-            sampleData.push({
-                id: `DEP${String(i).padStart(4, '0')}`,
-                userId: `USER${String(i + 100).padStart(3, '0')}`,
-                userName: `User ${i + 100}`,
-                phone: `+256${Math.floor(Math.random() * 900000000 + 100000000)}`,
-                email: `user${i + 100}@example.com`,
-                level: level.name,
-                levelDisplayName: level.displayName,
-                amount: level.price,
-                paymentMethod: paymentMethod,
-                transactionId: paymentMethod === 'Mobile Money' ? `MM${Date.now() + i}` : `BT${Date.now() + i}`,
-                status: finalStatus,
-                submittedAt: new Date(Date.now() - (Math.random() * 7 * 24 * 60 * 60 * 1000)).toISOString(),
-                approvedAt: finalStatus === 'approved' ? new Date().toISOString() : null,
-                rejectedAt: finalStatus === 'rejected' ? new Date().toISOString() : null,
-                adminNotes: finalStatus !== 'pending' ? `${finalStatus === 'approved' ? 'Approved' : 'Rejected'} by admin` : '',
-                screenshot: `data:image/svg+xml;base64,${btoa(`<svg width="200" height="100" xmlns="http://www.w3.org/2000/svg"><rect width="200" height="100" fill="#f0f0f0"/><text x="100" y="50" text-anchor="middle" dy=".3em" font-family="Arial" font-size="12">Payment Screenshot</text></svg>`)}`
-            });
-        }
-        
-        return sampleData;
-    }
+
     
     displayApprovals() {
         const container = document.getElementById('approvalsList');

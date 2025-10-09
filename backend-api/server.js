@@ -53,6 +53,24 @@ app.use((req, res, next) => {
     res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     
+        // Update user's accountBalance and totalDeposited
+        let userIndex = users.findIndex(u => u.id === deposit.userId);
+        if (userIndex !== -1) {
+            users[userIndex].accountBalance = (users[userIndex].accountBalance || 0) + (deposit.amount || 0);
+            users[userIndex].totalDeposited = (users[userIndex].totalDeposited || 0) + (deposit.amount || 0);
+            users[userIndex].lastUpdated = new Date().toISOString();
+        } else {
+            // If user doesn't exist, create with initial balances
+            users.push({
+                id: deposit.userId,
+                level: deposit.level,
+                accountBalance: deposit.amount || 0,
+                totalDeposited: deposit.amount || 0,
+                totalEarned: 0,
+                createdAt: new Date().toISOString(),
+                lastUpdated: new Date().toISOString()
+            });
+        }
     // Handle preflight requests
     if (req.method === 'OPTIONS') {
         res.sendStatus(200);
@@ -102,7 +120,8 @@ app.post('/api/deposits/submit', (req, res) => {
             email: email || '',
             amount: parseFloat(amount),
             level,
-            levelDisplayName: levelDisplayName || level,
+                accountBalance: parseFloat(depositAmount) || 0,
+                totalDeposited: parseFloat(depositAmount) || 0,
             accountName: accountName || userName,
             accountPhone: accountPhone || phone,
             screenshot: screenshot || '',
@@ -120,7 +139,8 @@ app.post('/api/deposits/submit', (req, res) => {
         res.status(201).json({
             success: true,
             message: 'Deposit request submitted successfully',
-            data: deposit
+                accountBalance: (users[userIndex].accountBalance || 0) + (parseFloat(depositAmount) || 0),
+                totalDeposited: (users[userIndex].totalDeposited || 0) + (parseFloat(depositAmount) || 0),
         });
 
     } catch (error) {
@@ -141,6 +161,32 @@ app.get('/api/deposits/requests', (req, res) => {
         let filteredDeposits = deposits;
         if (status) {
             filteredDeposits = deposits.filter(d => d.status === status);
+// Get user financial data (Account Balance, Total Deposited)
+app.get('/api/users/financial/:id', (req, res) => {
+    try {
+        const { id } = req.params;
+        let user = users.find(u => u.id === id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+        res.json({
+            success: true,
+            data: {
+                accountBalance: user.accountBalance || 0,
+                totalDeposited: user.totalDeposited || 0
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch user financial data',
+            error: error.message
+        });
+    }
+});
         }
 
         // Sort by creation date (newest first)
