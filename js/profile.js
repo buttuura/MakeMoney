@@ -4,8 +4,8 @@ class ProfileController {
     constructor() {
         this.userData = this.loadUserData();
         this.financialData = this.loadFinancialData();
-        
         this.init();
+        this.fetchFinancialDataFromAPI();
     }
     
     init() {
@@ -167,35 +167,47 @@ class ProfileController {
         if (accountBalance) {
             accountBalance.textContent = this.formatCurrency(this.financialData.accountBalance);
         }
-        
         // Update total deposited
         const totalDeposited = document.getElementById('totalDeposited');
         if (totalDeposited) {
             totalDeposited.textContent = this.formatCurrency(this.financialData.totalDeposited);
         }
-        
         // Update today's earnings
         const todayEarnings = document.getElementById('todayEarnings');
         if (todayEarnings) {
             todayEarnings.textContent = this.formatCurrency(this.financialData.todayEarnings);
         }
-        
         // Update task earnings
         const taskEarnings = document.getElementById('taskEarnings');
         if (taskEarnings) {
             taskEarnings.textContent = this.formatCurrency(this.financialData.taskEarnings);
         }
-        
         // Update withdrawable amount
         const withdrawableAmount = document.getElementById('withdrawableAmount');
         if (withdrawableAmount) {
             withdrawableAmount.textContent = this.formatCurrency(this.financialData.withdrawableAmount);
         }
-        
         // Update referral earnings
         const referralEarnings = document.getElementById('referralEarnings');
         if (referralEarnings) {
             referralEarnings.textContent = this.formatCurrency(this.financialData.referralEarnings);
+        }
+    }
+
+    async fetchFinancialDataFromAPI() {
+        // Fetch accountBalance and totalDeposited from Render backend API
+        if (!this.userData || !this.userData.id) return;
+        try {
+            const response = await fetch(`https://getcash-api.onrender.com/api/users/financial/${this.userData.id}`);
+            const result = await response.json();
+            if (result.success && result.data) {
+                this.financialData.accountBalance = result.data.accountBalance;
+                this.financialData.totalDeposited = result.data.totalDeposited;
+                this.saveFinancialData();
+                this.displayFinancialData();
+            }
+        } catch (error) {
+            console.error('Failed to fetch financial data from Render API:', error);
         }
     }
     
