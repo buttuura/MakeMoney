@@ -23,7 +23,7 @@
             // Test 1: Simple GET request
             try {
                 log('Test 1: GET /health');
-                const response = await fetch('http://localhost:3000/health');
+                    const response = await fetch('https://getcash-api.onrender.com/health');
                 const data = await response.json();
                 log(`✅ GET /health success: ${JSON.stringify(data)}`);
             } catch (error) {
@@ -33,7 +33,7 @@
             // Test 2: POST request
             try {
                 log('Test 2: POST /api/deposits/submit');
-                const response = await fetch('http://localhost:3000/api/deposits/submit', {
+                    const response = await fetch('https://getcash-api.onrender.com/api/deposits/submit', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -60,7 +60,7 @@
                 // Test 3: GET deposits
                 try {
                     log('Test 3: GET /api/deposits/requests');
-                    const getResponse = await fetch('http://localhost:3000/api/deposits/requests');
+                        const getResponse = await fetch('https://getcash-api.onrender.com/api/deposits/requests');
                     const deposits = await getResponse.json();
                     log(`✅ GET /api/deposits/requests success: ${deposits.data.length} deposits found`);
                     
@@ -70,7 +70,7 @@
                         // Test 4: PUT approve
                         try {
                             log(`Test 4: PUT /api/deposits/approve/${depositId}`);
-                            const approveResponse = await fetch(`http://localhost:3000/api/deposits/approve/${depositId}`, {
+                                const approveResponse = await fetch(`https://getcash-api.onrender.com/api/deposits/approve/${depositId}`, {
                                 method: 'PUT',
                                 headers: {
                                     'Content-Type': 'application/json',

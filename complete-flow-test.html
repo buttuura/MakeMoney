@@ -140,7 +140,7 @@
         document.addEventListener('DOMContentLoaded', async () => {
             try {
                 log('Testing API connectivity...');
-                const response = await fetch('http://localhost:3000/health');
+                const response = await fetch('https://getcash-api.onrender.com/health');
                 const data = await response.json();
                 log(`✅ Backend API is connected: ${JSON.stringify(data)}`, 'success');
             } catch (error) {

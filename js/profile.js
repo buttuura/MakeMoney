@@ -195,19 +195,46 @@ class ProfileController {
     }
 
     async fetchFinancialDataFromAPI() {
-        // Fetch accountBalance and totalDeposited from Render backend API
-        if (!this.userData || !this.userData.id) return;
+        // Fetch accountBalance and profile info from Render backend API
+        const token = localStorage.getItem('getcash_api_token');
+        if (!token) {
+            console.warn('No authentication token found.');
+            return;
+        }
         try {
-            const response = await fetch(`https://getcash-api.onrender.com/api/users/financial/${this.userData.id}`);
-            const result = await response.json();
-            if (result.success && result.data) {
-                this.financialData.accountBalance = result.data.accountBalance;
-                this.financialData.totalDeposited = result.data.totalDeposited;
-                this.saveFinancialData();
-                this.displayFinancialData();
+            // Fetch balance
+            const balanceRes = await fetch('https://getcash-api.onrender.com/api/user/balance', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const balanceData = await balanceRes.json();
+            if (balanceData.success && balanceData.balance !== undefined) {
+                this.financialData.accountBalance = balanceData.balance;
             }
+
+            // Fetch profile info (for totalDeposited if available)
+            const profileRes = await fetch('https://getcash-api.onrender.com/api/user/profile', {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            const profileData = await profileRes.json();
+            if (profileData.success && profileData.user) {
+                // If backend provides totalDeposited, update it
+                if (profileData.user.totalDeposited !== undefined) {
+                    this.financialData.totalDeposited = profileData.user.totalDeposited;
+                }
+            }
+
+            this.saveFinancialData();
+            this.displayFinancialData();
         } catch (error) {
-            console.error('Failed to fetch financial data from Render API:', error);
+            console.error('Failed to fetch financial/profile data from Render API:', error);
         }
     }
     
