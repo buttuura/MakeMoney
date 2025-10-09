@@ -12,23 +12,54 @@ app.use(helmet({
     contentSecurityPolicy: false
 }));
 
+// Enhanced CORS configuration
 app.use(cors({
-    origin: [
-        'https://buttuura.github.io',
-        'https://getcash-admin.netlify.app',
-        'http://localhost:3000',
-        'http://localhost:8000',
-        'http://127.0.0.1:8000',
-        'http://127.0.0.1:3000'
-    ],
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps, curl, Postman)
+        if (!origin) return callback(null, true);
+        
+        const allowedOrigins = [
+            'https://buttuura.github.io',
+            'https://getcash-admin.netlify.app',
+            'http://localhost:3000',
+            'http://localhost:8000',
+            'http://127.0.0.1:8000',
+            'http://127.0.0.1:3000'
+        ];
+        
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        
+        console.log('CORS: Allowing origin:', origin);
+        return callback(null, true); // Allow all origins for development
+    },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    exposedHeaders: ['Content-Type', 'Authorization'],
+    optionsSuccessStatus: 200, // Some legacy browsers choke on 204
+    preflightContinue: false
 }));
 
 app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Manual CORS headers for all requests (backup)
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS,PATCH');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+        res.sendStatus(200);
+        return;
+    }
+    next();
+});
 
 // In-memory storage (replace with real database)
 let deposits = [];

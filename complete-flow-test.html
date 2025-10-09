@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Flow Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        button { margin: 10px; padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .result { margin: 10px 0; padding: 10px; border-left: 4px solid #007bff; background: #f8f9fa; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+    </style>
+</head>
+<body>
+    <h1>Complete Admin Approval Flow Test</h1>
+    
+    <button onclick="step1()">Step 1: Submit Deposit via API</button>
+    <button onclick="step2()">Step 2: Load Deposits in Admin Panel</button>
+    <button onclick="step3()">Step 3: Approve First Deposit</button>
+    <button onclick="step4()">Step 4: Check User Notifications</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script src="js/api-service.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        let lastDepositId = null;
+        
+        function log(message, type = 'result') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        function clearResults() {
+            results.innerHTML = '';
+            lastDepositId = null;
+        }
+
+        // Initialize API service
+        const apiService = new APIService();
+
+        async function step1() {
+            try {
+                log('Step 1: Submitting deposit via API...');
+                
+                const depositData = {
+                    userId: 'test_user_' + Date.now(),
+                    userName: 'Test User',
+                    phone: '+256700123456',
+                    email: 'test@example.com',
+                    amount: 50000,
+                    level: 'intern',
+                    levelDisplayName: 'Intern Level',
+                    accountName: 'Test User',
+                    accountPhone: '+256700123456',
+                    screenshot: 'test_screenshot.jpg'
+                };
+
+                const response = await apiService.submitDepositRequest(depositData);
+                lastDepositId = response.data.id;
+                
+                log(`✅ Deposit submitted successfully! ID: ${lastDepositId}`, 'success');
+                log(`Deposit Details: ${JSON.stringify(response.data, null, 2)}`, 'success');
+                
+            } catch (error) {
+                log(`❌ Failed to submit deposit: ${error.message}`, 'error');
+                console.error('Step 1 error:', error);
+            }
+        }
+
+        async function step2() {
+            try {
+                log('Step 2: Loading deposits for admin panel...');
+                
+                const response = await apiService.getDepositRequests();
+                
+                log(`✅ Found ${response.data.length} deposits`, 'success');
+                response.data.forEach((deposit, index) => {
+                    log(`Deposit ${index + 1}: ${deposit.userName} - ${deposit.amount} UGX (${deposit.status})`, 'success');
+                });
+                
+            } catch (error) {
+                log(`❌ Failed to load deposits: ${error.message}`, 'error');
+                console.error('Step 2 error:', error);
+            }
+        }
+
+        async function step3() {
+            try {
+                if (!lastDepositId) {
+                    log('⚠️ No deposit ID available. Run Step 1 first.', 'error');
+                    return;
+                }
+                
+                log(`Step 3: Approving deposit ${lastDepositId}...`);
+                
+                const response = await apiService.approveDepositRequest(lastDepositId, 'Test approval from flow test');
+                
+                log(`✅ Deposit approved successfully!`, 'success');
+                log(`Approval Details: ${JSON.stringify(response.data, null, 2)}`, 'success');
+                
+            } catch (error) {
+                log(`❌ Failed to approve deposit: ${error.message}`, 'error');
+                console.error('Step 3 error:', error);
+            }
+        }
+
+        async function step4() {
+            try {
+                log('Step 4: Checking user notifications...');
+                
+                // Get the user ID from the last deposit
+                const deposits = await apiService.getDepositRequests();
+                if (deposits.data.length === 0) {
+                    log('⚠️ No deposits found. Run steps 1-3 first.', 'error');
+                    return;
+                }
+                
+                const userId = deposits.data[0].userId;
+                const notifications = await apiService.getUserNotifications(userId);
+                
+                log(`✅ Found ${notifications.data.length} notifications for user ${userId}`, 'success');
+                notifications.data.forEach((notification, index) => {
+                    log(`Notification ${index + 1}: ${notification.message} (read: ${notification.read})`, 'success');
+                });
+                
+            } catch (error) {
+                log(`❌ Failed to check notifications: ${error.message}`, 'error');
+                console.error('Step 4 error:', error);
+            }
+        }
+
+        // Test API connectivity on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            try {
+                log('Testing API connectivity...');
+                const response = await fetch('http://localhost:3000/health');
+                const data = await response.json();
+                log(`✅ Backend API is connected: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                log(`❌ Backend API connection failed: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html>

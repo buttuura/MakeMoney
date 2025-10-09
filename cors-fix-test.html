@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CORS Fix Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border-left: 4px solid #007bff; background: #f8f9fa; }
+        .error { border-left-color: #dc3545; background: #f8d7da; }
+        .success { border-left-color: #28a745; background: #d4edda; }
+        button { margin: 5px; padding: 8px 15px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔧 CORS Fix Verification</h1>
+    <p>Testing if CORS is now working properly...</p>
+
+    <button onclick="testSimpleGET()">Test Simple GET</button>
+    <button onclick="testPreflightPOST()">Test POST (Preflight)</button>
+    <button onclick="testPreflightPUT()">Test PUT (Preflight)</button>
+    <button onclick="clearResults()">Clear</button>
+
+    <div id="results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        
+        function log(message, type = 'result') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            results.appendChild(div);
+            console.log(message);
+        }
+
+        function clearResults() {
+            results.innerHTML = '';
+        }
+
+        async function testSimpleGET() {
+            try {
+                log('Testing simple GET request (no preflight needed)...');
+                const response = await fetch('http://localhost:3000/health');
+                
+                log(`Response Status: ${response.status}`, 'success');
+                log(`CORS Headers Present: ${response.headers.get('Access-Control-Allow-Origin') ? 'Yes' : 'No'}`, 'success');
+                
+                const data = await response.json();
+                log(`✅ GET request successful: ${JSON.stringify(data)}`, 'success');
+                
+            } catch (error) {
+                log(`❌ GET request failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testPreflightPOST() {
+            try {
+                log('Testing POST request (triggers preflight)...');
+                const response = await fetch('http://localhost:3000/api/deposits/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: 'cors_test',
+                        userName: 'CORS Test User',
+                        phone: '+256700000000',
+                        amount: 1000,
+                        level: 'intern',
+                        levelDisplayName: 'Intern Level',
+                        accountName: 'Test',
+                        accountPhone: '+256700000000'
+                    })
+                });
+                
+                log(`Response Status: ${response.status}`, response.ok ? 'success' : 'error');
+                log(`CORS Headers Present: ${response.headers.get('Access-Control-Allow-Origin') ? 'Yes' : 'No'}`, 'success');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ POST request successful: Deposit ID ${data.data.id}`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ POST request failed: ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ POST request failed: ${error.message}`, 'error');
+                log(`Error type: ${error.name}`, 'error');
+            }
+        }
+
+        async function testPreflightPUT() {
+            try {
+                log('Testing PUT request (triggers preflight)...');
+                // First get a deposit to approve
+                const getResponse = await fetch('http://localhost:3000/api/deposits/requests');
+                const deposits = await getResponse.json();
+                
+                if (deposits.data.length === 0) {
+                    log('⚠️ No deposits found. Run POST test first.', 'error');
+                    return;
+                }
+                
+                const depositId = deposits.data[0].id;
+                log(`Found deposit to test: ${depositId}`);
+                
+                const response = await fetch(`http://localhost:3000/api/deposits/approve/${depositId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        adminNotes: 'CORS test approval'
+                    })
+                });
+                
+                log(`Response Status: ${response.status}`, response.ok ? 'success' : 'error');
+                log(`CORS Headers Present: ${response.headers.get('Access-Control-Allow-Origin') ? 'Yes' : 'No'}`, 'success');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ PUT request successful: Approved ${data.data.userName}`, 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ PUT request failed: ${errorText}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ PUT request failed: ${error.message}`, 'error');
+                log(`Error type: ${error.name}`, 'error');
+            }
+        }
+
+        // Auto-test on load
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 CORS Fix Test Page Loaded');
+            log('Backend URL: http://localhost:3000');
+            log('Frontend URL: ' + window.location.origin);
+            log('Ready to test CORS functionality...');
+        });
+    </script>
+</body>
+</html>

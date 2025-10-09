@@ -6,7 +6,6 @@ class AdminApprovalController {
         this.allApprovals = [];
         this.selectedApprovals = new Set();
         this.currentModal = null;
-        this.githubAvailable = true; // Track GitHub connectivity
         
         // Use Render.com backend instead of GitHub
         this.apiService = new APIService();
@@ -24,40 +23,11 @@ class AdminApprovalController {
     
     async setupPage() {
         this.setupEventListeners();
-        await this.testGitHubConnectivity();
         await this.loadApprovals();
         this.updateStats();
     }
 
-    async testGitHubConnectivity() {
-        try {
-            // Test GitHub API connection
-            const response = await fetch(`https://api.github.com/repos/${this.github.owner}/${this.github.repo}`, {
-                headers: {
-                    'Authorization': `token ${this.github.token}`
-                }
-            });
 
-            if (response.status === 401) {
-                console.warn('GitHub authentication failed. Please check your token.');
-                this.showNotification('GitHub authentication failed. Using local storage fallback.', 'warning');
-                this.githubAvailable = false;
-            } else if (response.status === 404) {
-                console.warn('GitHub repository not found. Please check repository settings.');
-                this.showNotification('GitHub repository not found. Using local storage fallback.', 'warning');
-                this.githubAvailable = false;
-            } else if (response.ok) {
-                console.log('GitHub connectivity verified.');
-                this.githubAvailable = true;
-            } else {
-                console.warn('GitHub API error:', response.statusText);
-                this.githubAvailable = false;
-            }
-        } catch (error) {
-            console.warn('GitHub connectivity test failed:', error);
-            this.githubAvailable = false;
-        }
-    }
     
     setupEventListeners() {
         // Bulk selection checkbox
@@ -82,18 +52,12 @@ class AdminApprovalController {
             // Load deposit requests from Render backend
             const deposits = await this.apiService.getDepositRequests();
             
-            // If no data from API, try localStorage fallback
-            if (deposits.length === 0) {
-                const fallbackData = localStorage.getItem('github_fallback_deposit_requests.json');
-                if (fallbackData) {
-                    this.allApprovals = JSON.parse(fallbackData);
-                    this.showNotification('Loaded from local storage (API returned no data).', 'warning');
-                } else {
-                    this.allApprovals = this.generateSampleData();
-                    this.showNotification('No deposit requests found. Showing sample data.', 'info');
-                }
-            } else {
+            if (deposits && deposits.length > 0) {
                 this.allApprovals = deposits;
+                this.showNotification('✅ Deposit requests loaded successfully!', 'success');
+            } else {
+                this.allApprovals = this.generateSampleData();
+                this.showNotification('No deposit requests found. Showing sample data for testing.', 'info');
             }
             
             this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
@@ -102,27 +66,11 @@ class AdminApprovalController {
         } catch (error) {
             console.error('Error loading approvals:', error);
             
-            // Fallback to localStorage if API fails
-            const fallbackData = localStorage.getItem('github_fallback_deposit_requests.json');
-            if (fallbackData) {
-                try {
-                    this.allApprovals = JSON.parse(fallbackData);
-                    this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
-                    this.displayApprovals();
-                    this.showNotification('API unavailable. Loaded from local storage.', 'warning');
-                } catch (parseError) {
-                    console.error('Error parsing localStorage data:', parseError);
-                    this.allApprovals = this.generateSampleData();
-                    this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
-                    this.displayApprovals();
-                    this.showNotification('Failed to load approvals. Using sample data.', 'error');
-                }
-            } else {
-                this.allApprovals = this.generateSampleData();
-                this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
-                this.displayApprovals();
-                this.showNotification('API unavailable and no local data. Using sample data.', 'error');
-            }
+            // If API fails, use sample data for testing
+            this.allApprovals = this.generateSampleData();
+            this.pendingApprovals = this.allApprovals.filter(item => item.status === 'pending');
+            this.displayApprovals();
+            this.showNotification('⚠️ API connection failed. Using sample data for testing. Check if backend server is running.', 'warning');
         } finally {
             this.showLoading(false);
         }
@@ -420,8 +368,17 @@ class AdminApprovalController {
             approval.approvedAt = new Date().toISOString();
             approval.adminNotes = 'Approved by admin';
             
+            // Debug logging
+            console.log('Approving deposit:', approval);
+            console.log('Deposit ID:', approval.id || approval.timestamp);
+            
             // Approve via API service
-            await this.apiService.approveDepositRequest(approval.id || approval.timestamp, 'Approved by admin');
+            const depositId = approval.id || approval.timestamp;
+            if (!depositId) {
+                throw new Error('No deposit ID found for approval');
+            }
+            
+            await this.apiService.approveDepositRequest(depositId, 'Approved by admin');
             
             // Update user level via API
             await this.apiService.updateUserLevel(approval.userId, approval.level, approval.amount);
@@ -434,26 +391,8 @@ class AdminApprovalController {
         } catch (error) {
             console.error('Error approving deposit:', error);
             
-            // Try to handle GitHub authentication errors gracefully
-            if (error.message.includes('GitHub API error: 401')) {
-                this.showNotification('GitHub authentication failed. Using local storage fallback.', 'warning');
-                
-                // Save locally as fallback
-                try {
-                    localStorage.setItem('approved_deposits', JSON.stringify(this.allApprovals));
-                    localStorage.setItem('user_level_' + approval.userId, approval.level);
-                    localStorage.setItem('task_access_' + approval.userId, 'true');
-                    
-                    this.showNotification(`Deposit approved for ${approval.userName} (local storage). Task access activated.`, 'success');
-                    this.closeModal();
-                    this.displayApprovals();
-                    this.updateStats();
-                } catch (localError) {
-                    this.showNotification('Failed to approve deposit. Please check GitHub token configuration.', 'error');
-                }
-            } else {
-                this.showNotification('Failed to approve deposit. Please try again.', 'error');
-            }
+            this.showNotification(`❌ Failed to approve deposit for ${approval.userName}. Error: ${error.message}`, 'error');
+            console.error('Approval error details:', error);
         }
     }
     
@@ -464,12 +403,11 @@ class AdminApprovalController {
         
         try {
             const approval = this.currentModal;
-            approval.status = 'rejected';
-            approval.rejectedAt = new Date().toISOString();
-            approval.adminNotes = reason ? `Rejected: ${reason}` : 'Rejected by admin';
+            const depositId = approval.id || approval.timestamp;
+            const adminNotes = reason ? `Rejected: ${reason}` : 'Rejected by admin';
             
-            // Save to GitHub
-            await this.saveToGitHub('deposit_requests.json', this.allApprovals);
+            // Reject via API service
+            await this.apiService.rejectDepositRequest(depositId, adminNotes);
             
             this.showNotification(`Deposit rejected for ${approval.userName}.`, 'info');
             this.closeModal();
@@ -478,74 +416,11 @@ class AdminApprovalController {
             
         } catch (error) {
             console.error('Error rejecting deposit:', error);
-            this.showNotification('Failed to reject deposit. Please try again.', 'error');
+            this.showNotification(`❌ Failed to reject deposit. Error: ${error.message}`, 'error');
         }
     }
     
-    async updateUserLevel(approval) {
-        try {
-            // Load existing user data
-            const users = await this.loadFromGitHub('users.json') || [];
-            
-            // Find or create user
-            let user = users.find(u => u.userId === approval.userId);
-            if (!user) {
-                user = {
-                    userId: approval.userId,
-                    userName: approval.userName,
-                    phone: approval.phone,
-                    email: approval.email,
-                    level: approval.level,
-                    taskAccess: true,
-                    totalDeposited: approval.amount,
-                    totalEarned: 0,
-                    createdAt: new Date().toISOString(),
-                    lastUpdated: new Date().toISOString()
-                };
-                users.push(user);
-            } else {
-                user.level = approval.level;
-                user.taskAccess = true;
-                user.totalDeposited = (user.totalDeposited || 0) + approval.amount;
-                user.lastUpdated = new Date().toISOString();
-            }
-            
-            // Save updated user data
-            await this.saveToGitHub('users.json', users);
-            
-        } catch (error) {
-            console.error('Error updating user level:', error);
-            throw error;
-        }
-    }
 
-    async createUserNotification(approval) {
-        try {
-            // Load existing notifications
-            const notifications = await this.loadFromGitHub('user_notifications.json') || [];
-            
-            // Create notification for the approved user
-            const notification = {
-                userId: approval.userId,
-                type: 'deposit_approved',
-                message: `✅ Payment approved! Your ${approval.levelDisplayName} level has been activated.`,
-                depositRequest: approval,
-                createdAt: new Date().toISOString(),
-                read: false
-            };
-            
-            notifications.push(notification);
-            
-            // Save notifications
-            await this.saveToGitHub('user_notifications.json', notifications);
-            
-            console.log(`Notification created for user ${approval.userId}`);
-            
-        } catch (error) {
-            console.error('Error creating user notification:', error);
-            throw error;
-        }
-    }
     
     closeModal() {
         document.getElementById('approvalModal').style.display = 'none';
@@ -612,112 +487,7 @@ class AdminApprovalController {
         }, 5000);
     }
     
-    // GitHub helper methods
-    async loadFromGitHub(fileName) {
-        // If GitHub is not available, try localStorage fallback
-        if (!this.githubAvailable) {
-            console.warn('GitHub not available, trying localStorage fallback for:', fileName);
-            const fallbackData = localStorage.getItem(`github_fallback_${fileName}`);
-            if (fallbackData) {
-                try {
-                    return JSON.parse(fallbackData);
-                } catch (e) {
-                    console.error('Error parsing localStorage fallback:', e);
-                    return [];
-                }
-            }
-            return [];
-        }
 
-        try {
-            const file = await this.getGitHubFile(fileName);
-            if (file && file.content) {
-                const content = atob(file.content);
-                return JSON.parse(content);
-            }
-            return [];
-        } catch (error) {
-            console.error('Error loading from GitHub:', error);
-            // Try localStorage fallback on error
-            const fallbackData = localStorage.getItem(`github_fallback_${fileName}`);
-            if (fallbackData) {
-                console.warn('Using localStorage fallback for:', fileName);
-                try {
-                    return JSON.parse(fallbackData);
-                } catch (e) {
-                    console.error('Error parsing localStorage fallback:', e);
-                }
-            }
-            return [];
-        }
-    }
-    
-    async saveToGitHub(fileName, data) {
-        // If GitHub is not available, use localStorage fallback
-        if (!this.githubAvailable) {
-            console.warn('GitHub not available, using localStorage fallback for:', fileName);
-            localStorage.setItem(`github_fallback_${fileName}`, JSON.stringify(data));
-            return { message: 'Saved to local storage' };
-        }
-
-        const content = JSON.stringify(data, null, 2);
-        
-        try {
-            const currentFile = await this.getGitHubFile(fileName);
-            
-            const response = await fetch(`https://api.github.com/repos/${this.github.owner}/${this.github.repo}/contents/${fileName}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${this.github.token}`,
-                    'Content-Type': 'application/json',
-                    'User-Agent': 'GetCash-App'
-                },
-                body: JSON.stringify({
-                    message: `Update ${fileName} - ${new Date().toISOString()}`,
-                    content: btoa(content),
-                    branch: this.github.branch,
-                    sha: currentFile ? currentFile.sha : undefined
-                })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`GitHub API error: ${response.status}`);
-            }
-            
-            return await response.json();
-        } catch (error) {
-            console.error('Error saving to GitHub:', error);
-            // Fallback to localStorage on error
-            console.warn('Falling back to localStorage for:', fileName);
-            localStorage.setItem(`github_fallback_${fileName}`, JSON.stringify(data));
-            this.githubAvailable = false;
-            throw error;
-        }
-    }
-    
-    async getGitHubFile(fileName) {
-        try {
-            const response = await fetch(`https://api.github.com/repos/${this.github.owner}/${this.github.repo}/contents/${fileName}?ref=${this.github.branch}`, {
-                headers: {
-                    'Authorization': `token ${this.github.token}`,
-                    'User-Agent': 'GetCash-App'
-                }
-            });
-            
-            if (response.status === 404) {
-                return null;
-            }
-            
-            if (!response.ok) {
-                throw new Error(`GitHub API error: ${response.status}`);
-            }
-            
-            return await response.json();
-        } catch (error) {
-            console.error('Error getting GitHub file:', error);
-            return null;
-        }
-    }
 }
 
 // Global functions

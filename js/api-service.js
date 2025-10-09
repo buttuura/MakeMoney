@@ -5,8 +5,8 @@
 
 class APIService {
     constructor() {
-        // This will be your Render.com backend URL
-        this.baseURL = 'https://getcash-backend-1.onrender.com'; // Updated to new backend URL
+        // Local backend for testing (change back to Render URL when deployed)
+        this.baseURL = 'http://localhost:3000'; // Local backend for testing
         this.token = null;
         this.init();
     }
@@ -56,20 +56,32 @@ class APIService {
     async makeRequest(endpoint, options = {}) {
         try {
             const url = `${this.baseURL}${endpoint}`;
+            
+            // Handle data property and convert to body
             const config = {
                 headers: this.getHeaders(),
                 ...options
             };
 
-            console.log(`API Request: ${config.method || 'GET'} ${url}`);
-
-            const response = await fetch(url, config);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.message || 'API request failed');
+            // If data is provided, convert it to body and ensure JSON content type
+            if (options.data) {
+                config.body = JSON.stringify(options.data);
+                config.headers['Content-Type'] = 'application/json';
+                delete config.data; // Remove data property as it's not valid for fetch
             }
 
+            console.log(`API Request: ${config.method || 'GET'} ${url}`, config.body ? JSON.parse(config.body) : '(no body)');
+
+            const response = await fetch(url, config);
+            
+            // Check if response is ok before trying to parse JSON
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`API Error ${response.status}:`, errorText);
+                throw new Error(`API request failed: ${response.status} ${errorText}`);
+            }
+
+            const data = await response.json();
             return data;
         } catch (error) {
             console.error('API Request Error:', error);
