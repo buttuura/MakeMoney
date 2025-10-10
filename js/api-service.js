@@ -6,7 +6,7 @@
 class APIService {
     constructor() {
         // Local backend for testing (change back to Render URL when deployed)
-    this.baseURL = 'https://getcash-api.onrender.com'; // Production backend
+    this.baseURL = 'https://getcash-backend-1.onrender.com'; // Production backend
         this.token = null;
         this.init();
     }
