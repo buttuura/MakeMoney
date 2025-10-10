@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     registrationForm.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         // Get form data
         const formData = {
             firstName: document.getElementById('firstName').value.trim(),
@@ -13,41 +13,62 @@ document.addEventListener('DOMContentLoaded', function() {
             password: document.getElementById('password').value,
             confirmPassword: document.getElementById('confirmPassword').value
         };
-        
+
         // Validation
         if (!validateForm(formData)) {
             return;
         }
-        
-        // Save user data using Cloud Database for cross-device access
+
+        // Try to register online first
+        let result;
         try {
-            // Debug: Log the form data
-            console.log('Registration formData:', formData);
-            
-            // Register user using cloud database for cross-device access
-            const result = window.CloudDB ? 
-                await window.CloudDB.registerUserCloud(formData) : 
-                window.UserDB.registerUser(formData);
-            
-            // Debug: Log the registration result
-            console.log('Registration result:', result);
-            
-            if (result.success) {
-                // Show success message with user info
-                showAlert('Success', `Welcome ${result.user.fullName}! Account created successfully and synced to cloud. You can now sign in from ANY device with your phone number: ${result.user.phone}`, 'success', function() {
-                    // Redirect to login page
-                    window.location.href = 'index.html';
-                });
+            if (window.CloudDB && window.CloudDB.registerUserCloud) {
+                result = await window.CloudDB.registerUserCloud(formData);
             } else {
-                // Show error message
-                showAlert('Registration Failed', result.message, 'error');
+                throw new Error('CloudDB not available');
             }
-            
-        } catch (error) {
-            console.error('Registration error:', error);
-            showAlert('Error', 'Failed to create account. Please try again.', 'error');
+        } catch (err) {
+            // Save locally if cloud fails
+            result = window.UserDB.registerUser(formData);
+            // Mark user as unsynced
+            if (result.success) {
+                result.user.unsynced = true;
+                if (window.UserDB.markUnsyncedUser) {
+                    window.UserDB.markUnsyncedUser(result.user);
+                }
+            }
+        }
+
+        // Show result
+        if (result.success) {
+            showAlert('Success', `Welcome ${result.user.fullName}! Account created. ${result.user.unsynced ? 'Saved locally, will sync when online.' : 'Synced to cloud. You can now sign in from ANY device.'}`, 'success', function() {
+                window.location.href = 'index.html';
+            });
+        } else {
+            showAlert('Registration Failed', result.message, 'error');
         }
     });
+
+    // Sync unsynced users when network/API is available
+    async function syncLocalUsersToCloud() {
+        if (window.CloudDB && window.UserDB && window.UserDB.getUnsyncedUsers) {
+            const unsyncedUsers = window.UserDB.getUnsyncedUsers();
+            for (const user of unsyncedUsers) {
+                try {
+                    const cloudResult = await window.CloudDB.registerUserCloud(user);
+                    if (cloudResult.success) {
+                        window.UserDB.markUserSynced(user.phone);
+                        console.log('User synced to cloud:', user.phone);
+                    }
+                } catch (err) {
+                    console.warn('Sync failed for user:', user.phone);
+                }
+            }
+        }
+    }
+
+    // Try syncing every 30 seconds
+    setInterval(syncLocalUsersToCloud, 30000);
 });
 
 function validateForm(data) {

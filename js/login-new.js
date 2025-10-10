@@ -11,68 +11,69 @@ class LoginController {
         this.rememberCheckbox = null;
         this.loginButton = null;
         this.togglePasswordBtn = null;
-        
-        this.init();
+        // ...existing code...
+        // Try syncing logins every 30 seconds
+        setInterval(() => this.syncLocalLoginsToCloud(), 30000);
     }
-    
-    /**
-     * Initialize the login page
-     */
-    init() {
-        // Wait for DOM to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.setupElements());
-        } else {
-            this.setupElements();
+
+    async performLogin(formData) {
+        try {
+            // Simulate API delay for UX
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            // Debug: Log login attempt
+            console.log('Login attempt:', { phone: formData.phone, password: '***hidden***' });
+
+            let result;
+            // Try cloud login first
+            try {
+                if (window.CloudDB && window.CloudDB.loginUserCloud) {
+                    result = await window.CloudDB.loginUserCloud(formData.phone, formData.password);
+                } else {
+                    throw new Error('CloudDB not available');
+                }
+            } catch (err) {
+                // Fallback to local login
+                result = window.UserDB.loginUser(formData.phone, formData.password);
+                // Mark login as unsynced if needed
+                if (result.success && window.UserDB.markUnsyncedLogin) {
+                    window.UserDB.markUnsyncedLogin(result.user);
+                }
+            }
+
+            // Debug: Log login result
+            console.log('Login result:', result);
+
+            if (result.success) {
+                this.currentUser = result.user;
+                return { success: true, user: result.user, message: result.message };
+            } else {
+                return { success: false, message: result.message };
+            }
+        } catch (error) {
+            console.error('Login error:', error);
+            return { success: false, message: 'Login failed due to system error' };
         }
     }
-    
-    /**
-     * Setup DOM elements and event listeners
-     */
-    setupElements() {
-        // Get DOM elements
-        this.form = document.querySelector('.login-form');
-        this.phoneField = document.getElementById('phone');
-        this.passwordField = document.getElementById('password');
-        this.rememberCheckbox = document.getElementById('remember');
-        this.loginButton = document.querySelector('.login-btn');
-        this.togglePasswordBtn = document.querySelector('.toggle-password');
-        
-        // Setup event listeners
-        this.setupEventListeners();
-        
-        // Load saved phone if exists
-        this.loadSavedCredentials();
+
+    // Sync unsynced logins when network/API is available
+    async syncLocalLoginsToCloud() {
+        if (window.CloudDB && window.UserDB && window.UserDB.getUnsyncedLogins) {
+            const unsyncedLogins = window.UserDB.getUnsyncedLogins();
+            for (const user of unsyncedLogins) {
+                try {
+                    const cloudResult = await window.CloudDB.loginUserCloud(user.phone, user.password);
+                    if (cloudResult.success) {
+                        window.UserDB.markLoginSynced(user.phone);
+                        console.log('Login synced to cloud:', user.phone);
+                    }
+                } catch (err) {
+                    console.warn('Sync failed for login:', user.phone);
+                }
+            }
+        }
     }
-    
-    /**
-     * Setup all event listeners
-     */
-    setupEventListeners() {
-        // Form submission
-        if (this.form) {
-            this.form.addEventListener('submit', (e) => this.handleSubmit(e));
-        }
-        
-        // Password toggle
-        if (this.togglePasswordBtn) {
-            this.togglePasswordBtn.addEventListener('click', () => this.togglePassword());
-        }
-        
-        // Real-time validation
-        if (this.phoneField) {
-            this.phoneField.addEventListener('blur', () => this.validatePhone());
-            this.phoneField.addEventListener('input', () => this.clearFieldError(this.phoneField));
-        }
-        
-        if (this.passwordField) {
-            this.passwordField.addEventListener('input', () => this.clearFieldError(this.passwordField));
-        }
-        
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
-    }
+    // ...existing code...
     
     /**
      * Handle form submission
@@ -115,24 +116,40 @@ class LoginController {
     /**
      * Perform login using UserDatabase
      */
+        // ...existing code...
+        // Try syncing logins every 30 seconds
+        setInterval(() => this.syncLocalLoginsToCloud(), 30000);
+    }
+
     async performLogin(formData) {
         try {
             // Simulate API delay for UX
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
             // Debug: Log login attempt
             console.log('Login attempt:', { phone: formData.phone, password: '***hidden***' });
-            
-            // Use Cloud Database to authenticate for cross-device access
-            const result = window.CloudDB ? 
-                await window.CloudDB.loginUserCloud(formData.phone, formData.password) : 
-                window.UserDB.loginUser(formData.phone, formData.password);
-            
+
+            let result;
+            // Try cloud login first
+            try {
+                if (window.CloudDB && window.CloudDB.loginUserCloud) {
+                    result = await window.CloudDB.loginUserCloud(formData.phone, formData.password);
+                } else {
+                    throw new Error('CloudDB not available');
+                }
+            } catch (err) {
+                // Fallback to local login
+                result = window.UserDB.loginUser(formData.phone, formData.password);
+                // Mark login as unsynced if needed
+                if (result.success && window.UserDB.markUnsyncedLogin) {
+                    window.UserDB.markUnsyncedLogin(result.user);
+                }
+            }
+
             // Debug: Log login result
             console.log('Login result:', result);
-            
+
             if (result.success) {
-                // Store user data for session
                 this.currentUser = result.user;
                 return { success: true, user: result.user, message: result.message };
             } else {
@@ -142,6 +159,46 @@ class LoginController {
             console.error('Login error:', error);
             return { success: false, message: 'Login failed due to system error' };
         }
+    }
+
+    // Sync unsynced logins when network/API is available
+    async syncLocalLoginsToCloud() {
+        if (window.CloudDB && window.UserDB && window.UserDB.getUnsyncedLogins) {
+            const unsyncedLogins = window.UserDB.getUnsyncedLogins();
+            for (const user of unsyncedLogins) {
+                try {
+                    const cloudResult = await window.CloudDB.loginUserCloud(user.phone, user.password);
+                    if (cloudResult.success) {
+                        window.UserDB.markLoginSynced(user.phone);
+                        console.log('Login synced to cloud:', user.phone);
+                    }
+                } catch (err) {
+                    console.warn('Sync failed for login:', user.phone);
+                }
+            }
+        }
+    }
+    // Try syncing logins every 30 seconds
+    setInterval(() => this.syncLocalLoginsToCloud(), 30000);
+    // Sync unsynced logins when network/API is available
+    async syncLocalLoginsToCloud() {
+        if (window.CloudDB && window.UserDB && window.UserDB.getUnsyncedLogins) {
+            const unsyncedLogins = window.UserDB.getUnsyncedLogins();
+            for (const user of unsyncedLogins) {
+                try {
+                    const cloudResult = await window.CloudDB.loginUserCloud(user.phone, user.password);
+                    if (cloudResult.success) {
+                        window.UserDB.markLoginSynced(user.phone);
+                        console.log('Login synced to cloud:', user.phone);
+                    }
+                } catch (err) {
+                    console.warn('Sync failed for login:', user.phone);
+                }
+            }
+        }
+    }
+    // Try syncing logins every 30 seconds
+    setInterval(() => this.syncLocalLoginsToCloud(), 30000);
     }
     
     /**
