@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         let result;
         try {
-            if (window.CloudDB && window.CloudDB.registerUserCloud) {
-                result = await window.CloudDB.registerUserCloud(formData);
+            if (window.APIService && window.APIService.registerUser) {
+                result = await window.APIService.registerUser(formData);
             } else {
-                throw new Error('CloudDB not available');
+                throw new Error('APIService not available');
             }
         } catch (err) {
             result = window.UserDB.registerUser(formData);
@@ -42,11 +42,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Sync unsynced users when network/API is available
     async function syncLocalUsersToCloud() {
-        if (window.CloudDB && window.UserDB && window.UserDB.getUnsyncedUsers) {
+        if (window.APIService && window.UserDB && window.UserDB.getUnsyncedUsers) {
             const unsyncedUsers = window.UserDB.getUnsyncedUsers();
             for (const user of unsyncedUsers) {
                 try {
-                    const cloudResult = await window.CloudDB.registerUserCloud(user);
+                    const cloudResult = await window.APIService.registerUser(user);
                     if (cloudResult.success) {
                         window.UserDB.markUserSynced(user.phone);
                         console.log('User synced to cloud:', user.phone);
